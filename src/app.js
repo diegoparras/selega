@@ -546,6 +546,17 @@ async function init() {
   document.addEventListener("click", (e) => { if (!mMenu.classList.contains("hidden") && !mMenu.contains(e.target) && !mBtn.contains(e.target)) mMenu.classList.add("hidden"); });
   window.addEventListener("keydown", (e) => { if (e.key === "Escape") mMenu.classList.add("hidden"); });
 
+  // "Acerca de Selega": versión (inyectada por el server desde package.json, leída del <meta>) + créditos.
+  $("#btn-acerca").onclick = () => {
+    const v = document.querySelector('meta[name="selega-version"]')?.content || "";
+    const ver = /^\d/.test(v) ? `v${v}` : "—";
+    aviso("Acerca de Selega",
+      `Selega <strong>${esc(ver)}</strong><br>Control de estados contables para legalizaciones.<br>` +
+      `Parte de la familia Escriba.<br><br>Licencia Apache-2.0<br>` +
+      `<a href="https://github.com/diegoparras/selega" target="_blank" rel="noopener noreferrer">GitHub</a> · ` +
+      `<a href="https://getescriba.com/es/selega/" target="_blank" rel="noopener noreferrer">getescriba.com</a>`);
+  };
+
   // Gate de sesión (Postgres + cookie firmada). Si no hay sesión, mostrar login.
   // Mientras tanto, .booting mantiene oculta la app (splash con logo) para que NO parpadee
   // Selega antes del login. La sacamos recién acá, ya autenticados → primero login, después app.

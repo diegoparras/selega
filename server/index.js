@@ -2,6 +2,7 @@
 // Self-host / Docker. La única salida externa es el proxy LLM (gateado, server-side).
 import http from "node:http";
 import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { extname, join, normalize, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
@@ -9,6 +10,8 @@ import { initDb, seedAdmin } from "./db.js";
 import { handle } from "./api.js";
 
 const root = normalize(join(dirname(fileURLToPath(import.meta.url)), "..")); // raíz de la app
+// Versión: única fuente = package.json. Se inyecta en el HTML (el "Acerca de" la lee del <meta>).
+const VERSION = (() => { try { return JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version || ""; } catch { return ""; } })();
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript",
   ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml",
   ".ico": "image/x-icon", ".png": "image/png", ".wasm": "application/wasm",
@@ -25,7 +28,9 @@ const server = http.createServer(async (req, res) => {
     if (BLOQUEADO(path)) { res.writeHead(403, txt); return res.end("forbidden"); }
     const file = normalize(join(root, path === "/" ? "/index.html" : path));
     if (!file.startsWith(root)) { res.writeHead(403, txt); return res.end("forbidden"); }
-    const data = await readFile(file);
+    let data = await readFile(file);
+    // index.html: inyectar la versión (placeholder __SELEGA_VERSION__) desde package.json.
+    if (path === "/" || path === "/index.html") data = Buffer.from(data.toString("utf8").replace(/__SELEGA_VERSION__/g, VERSION), "utf8");
     // Los vendors (pdf.js/tesseract/pdf-lib/fuentes, ~24MB) son INMUTABLES → cache larga
     // (evita re-bajarlos en cada OCR). El HTML/JS/CSS de la app se bustea con ?v=N → no-cache.
     const inmutable = path.startsWith("/public/vendor/");
