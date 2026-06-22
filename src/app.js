@@ -547,9 +547,12 @@ async function init() {
   window.addEventListener("keydown", (e) => { if (e.key === "Escape") mMenu.classList.add("hidden"); });
 
   // Gate de sesión (Postgres + cookie firmada). Si no hay sesión, mostrar login.
+  // Mientras tanto, .booting mantiene oculta la app (splash con logo) para que NO parpadee
+  // Selega antes del login. La sacamos recién acá, ya autenticados → primero login, después app.
   let usuario = await me();
   if (!usuario) usuario = await mostrarLogin();
   $("#login").classList.add("hidden");
+  document.body.classList.remove("booting");
   // Niveles: 'funcional' es alias histórico de 'agente'. superadmin ⊇ admin.
   const ROL_LABEL = { agente: "Agente", funcional: "Agente", supervisor: "Supervisor", auditor: "Auditor", admin: "Admin", superadmin: "Superadmin" };
   const rol = usuario.role === "funcional" ? "agente" : usuario.role;

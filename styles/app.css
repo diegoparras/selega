@@ -142,6 +142,15 @@ main { padding: 20px 22px 60px; max-width: 1280px; margin: 0 auto; }
   background: rgba(245,158,11,.08); padding: 10px 12px; font-size: 13px; }
 a.link { color: var(--accent); cursor: pointer; }
 
+/* Arranque: hasta que /api/auth/me resuelve, ocultamos el chrome de la app (si no, parpadea
+   Selega 0,7s antes del login). Mostramos un splash neutro con el logo; app.js saca .booting
+   recién cuando hay sesión (login OK o ya logueado) → no parpadea ni la app ni el login. */
+body.booting > header, body.booting > main { display: none !important; }
+body.booting::before { content: ""; position: fixed; inset: 0; z-index: 50;
+  background: var(--bg) center / 56px no-repeat url("/public/logo.svg");
+  animation: selega-boot 1.2s ease-in-out infinite; }
+@keyframes selega-boot { 0%, 100% { opacity: .35; } 50% { opacity: .9; } }
+
 /* Login — gate difuminado (spec §8.11) */
 .login-overlay { position: fixed; inset: 0; display: grid; place-items: center; z-index: 100; padding: 20px;
   background: color-mix(in srgb, var(--bg) 55%, transparent);
