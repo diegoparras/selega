@@ -18,8 +18,10 @@ services:
     restart: unless-stopped
 
   selega:
+    # Conectá el repo al panel y BUILDEA esto, o bajá la imagen ya publicada en GHCR
+    # (para Portainer/Easypanel "pegar compose": comentá `build: .` y queda solo la imagen).
+    image: ghcr.io/diegoparras/selega:latest
     build: .
-    image: selega
     container_name: selega
     ports:
       - "${SELEGA_PORT:-8088}:8080"          # host → contenedor 8080
