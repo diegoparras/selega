@@ -14,7 +14,7 @@ const ROUTINGS = [
 ];
 
 export async function montarSuper(cont, registro, onChange) {
-  let cfg = { jurisdicciones: [], cap_vlm_local: false, ollama_url: "", ollama_model: "", ollama_keep: "demanda", ia_routing: "local-first", cap_ocr: true };
+  let cfg = { jurisdicciones: [], cap_vlm_local: false, ollama_url: "", ollama_model: "", ollama_keep: "demanda", ia_routing: "local-first", cap_ocr: true, data_collection_deny: true };
   try { cfg = { ...cfg, ...(await (await fetch("/api/super/config")).json()) }; } catch { /* defaults */ }
   const jurSet = new Set(cfg.jurisdicciones || []);
 
@@ -73,6 +73,14 @@ export async function montarSuper(cont, registro, onChange) {
           <div class="sup-motor">
             <div class="sup-motor-h"><strong>Nube (OpenRouter)</strong><span class="sup-badge" id="sup-nube-badge">…</span></div>
             <p class="adm-hint">Gateada: se configura la API key en Admin → Procesamiento con IA. Acá solo se ve el estado y entra en el routing.</p>
+            <div class="adm-grid">
+              <label>Privacidad del proveedor</label>
+              <select id="sup-datacol">
+                <option value="deny">No retener: el proveedor no guarda ni entrena con el balance (recomendado)</option>
+                <option value="allow">Permitir retención: solo si controlás el destino del modelo</option>
+              </select>
+            </div>
+            <p class="adm-hint">Por defecto Selega exige proveedores que NO conservan el prompt (los EECC son datos de terceros). Cambialo solo si sabés a qué modelo va.</p>
           </div>
 
           <div class="adm-grid">
@@ -87,6 +95,7 @@ export async function montarSuper(cont, registro, onChange) {
   cont.querySelector("#sup-volver").onclick = () => onChange?.("volver");
   // Estado del tanque: off / demanda / siempre (combina el toggle y el modo de carga).
   cont.querySelector("#sup-local-estado").value = cfg.cap_vlm_local ? (cfg.ollama_keep || "demanda") : "off";
+  cont.querySelector("#sup-datacol").value = cfg.data_collection_deny ? "deny" : "allow";
 
   // ---- Sonda de motores (enabled ≠ available) ----
   const badge = (el, ok, txt) => { el.className = "sup-badge " + (ok ? "ok" : "bad"); el.textContent = txt; };
@@ -191,6 +200,7 @@ export async function montarSuper(cont, registro, onChange) {
       ollama_url: cont.querySelector("#sup-ollama-url").value.trim(),
       ollama_model: cont.querySelector("#sup-ollama-model").value,
       ia_routing: cont.querySelector("#sup-routing").value,
+      data_collection_deny: cont.querySelector("#sup-datacol").value === "deny",
     };
     try {
       const r = await fetch("/api/super/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });

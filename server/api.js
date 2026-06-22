@@ -11,7 +11,7 @@ import { extraerDePDF } from "./extraer.js";
 const ROLES = ["agente", "supervisor", "auditor", "admin", "superadmin"];
 
 // Defaults de la capa de motores (se sobrescriben desde config por el superadmin).
-const CAP_DEFAULTS = { cap_ocr: "1", cap_vlm_local: "0", ollama_url: "http://host.docker.internal:11434", ollama_model: "qwen2.5vl:3b", ia_routing: "local-first", ollama_keep: "demanda" };
+const CAP_DEFAULTS = { cap_ocr: "1", cap_vlm_local: "0", ollama_url: "http://host.docker.internal:11434", ollama_model: "qwen2.5vl:3b", ia_routing: "local-first", ollama_keep: "demanda", data_collection_deny: config.dataCollectionDeny };
 // keep_alive de Ollama: "siempre" = el modelo queda en RAM (rápido); "demanda" = carga al usarlo y se descarga tras 5 min.
 const keepAlive = (modo) => (modo === "siempre" ? -1 : "5m");
 
@@ -279,12 +279,14 @@ export async function handle(req, res, path) {
         const userContent = imgs.length
           ? [{ type: "text", text: prompt }, ...imgs.map((u2) => ({ type: "image_url", image_url: { url: u2 } }))]
           : prompt;
+        // Privacidad: por defecto exigimos que el proveedor NO retenga/entrene con el balance
+        // (data_collection="deny" → OpenRouter rutea solo a proveedores ZDR). El superadmin puede
+        // permitirlo (Sistema → Nube, o DATA_COLLECTION_DENY=OFF) si controla el destino.
+        const dcDeny = (await cap("data_collection_deny")) === "1";
         const r = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST",
           headers: { Authorization: `Bearer ${cloudKey}`, "Content-Type": "application/json", "X-Title": "Selega" },
           body: JSON.stringify({ model, messages: [{ role: "system", content: system }, { role: "user", content: userContent }],
-            // EECC de terceros: prohibir retención/entrenamiento del proveedor. OpenRouter
-            // rutea solo a proveedores con política de NO conservar el prompt (ZDR).
-            provider: { data_collection: "deny" },
+            provider: { data_collection: dcDeny ? "deny" : "allow" },
             ...(schema && { response_format: { type: "json_schema", json_schema: { name: "cifras", schema } } }) }) });
         if (!r.ok) throw new Error(`OpenRouter ${r.status}`);
         const data = await r.json();
@@ -320,7 +322,8 @@ export async function handle(req, res, path) {
       return json(res, 200, {
         cap_ocr: (await cap("cap_ocr")) === "1", cap_vlm_local: (await cap("cap_vlm_local")) === "1",
         ollama_url: await cap("ollama_url"), ollama_model: await cap("ollama_model"), ollama_keep: await cap("ollama_keep"),
-        ia_routing: await cap("ia_routing"), jurisdicciones: await jurisHabilitadas(),
+        ia_routing: await cap("ia_routing"), data_collection_deny: (await cap("data_collection_deny")) === "1",
+        jurisdicciones: await jurisHabilitadas(),
       });
     }
     if (path === "/api/super/config" && m === "PUT") {
@@ -331,6 +334,7 @@ export async function handle(req, res, path) {
       if (b.ollama_model) await repo.setConfig("ollama_model", String(b.ollama_model));
       if (b.ollama_keep) await repo.setConfig("ollama_keep", String(b.ollama_keep));
       if (b.ia_routing) await repo.setConfig("ia_routing", String(b.ia_routing));
+      if (b.data_collection_deny != null) await repo.setConfig("data_collection_deny", b.data_collection_deny ? "1" : "0");
       if (Array.isArray(b.jurisdicciones)) await repo.setConfig("jurisdicciones", JSON.stringify(b.jurisdicciones));
       await repo.auditar(user.email, null, "super_config", "");
       // "Siempre cargado": precalentar el modelo en background (queda en RAM, mata el cold-start).

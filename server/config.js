@@ -16,4 +16,10 @@ export const config = {
   // Poné SELEGA_SECURE_COOKIE=1 cuando Selega esté detrás de TLS (reverse proxy / HTTPS):
   // la cookie de sesión solo viaja por HTTPS. En dev/HTTP local queda en 0.
   cookieSecure: process.env.SELEGA_SECURE_COOKIE === "1",
+  // Privacidad del proxy de IA nube (OpenRouter): por defecto exigimos que el proveedor
+  // NO retenga ni entrene con el prompt (provider.data_collection="deny"). Es el DEFAULT
+  // de fábrica para EECC de terceros. DATA_COLLECTION_DENY=OFF (o 0/false/no) permite
+  // proveedores que sí retienen — solo tiene sentido cuando el destino es un entorno que
+  // controlás. El superadmin puede sobreescribir este default desde Sistema → Nube.
+  dataCollectionDeny: /^(off|0|false|no)$/i.test(process.env.DATA_COLLECTION_DENY || "") ? "0" : "1",
 };

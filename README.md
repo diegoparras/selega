@@ -134,6 +134,7 @@ volumes:
 | `SELEGA_SECURE_COOKIE` | `0` | poné `1` detrás de HTTPS/TLS (cookie solo por HTTPS). |
 | `SELEGA_PORT` | `8088` | puerto del host. |
 | `OPENROUTER_KEY` | *(vacío)* | opcional, IA en la nube. Mejor cargarla desde Admin. |
+| `DATA_COLLECTION_DENY` | `1` | IA nube: `1` exige proveedores que **no** retienen/entrenan con el balance (recomendado). `OFF` lo permite (solo si controlás el destino). El superadmin lo cambia desde Sistema → Nube. |
 | `POSTGRES_USER` / `POSTGRES_DB` | `selega` | usuario / nombre de la base. |
 
 ---

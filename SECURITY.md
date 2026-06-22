@@ -12,7 +12,10 @@ La seguridad es prioridad de diseño. Si encontrás una vulnerabilidad, reportal
 - **Queries 100% parametrizadas** (sin concatenación SQL).
 - **`esc()`** en toda salida a HTML; **CSP** + `X-Frame-Options` + `nosniff` + COOP + Permissions-Policy.
 - API key de IA **write-only**, nunca llega al navegador. La extracción y el tanque local
-  procesan **sin que el balance salga del servidor**.
+  procesan **sin que el balance salga del servidor**. Cuando se usa la nube (opt-in), el
+  default exige proveedores que **no retienen ni entrenan** con el prompt
+  (`provider.data_collection="deny"`); el superadmin puede permitir la retención
+  (`DATA_COLLECTION_DENY=OFF` / Sistema → Nube) solo si controla el destino del modelo.
 - Contenedor corre como **usuario no-root**. Secretos por entorno (nunca en el repo).
 - Roles con gating server-side (agente/supervisor/auditor/admin/superadmin); IDOR y escalada
   de privilegios verificados.
