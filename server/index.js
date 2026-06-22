@@ -38,8 +38,10 @@ const server = http.createServer(async (req, res) => {
       "Cross-Origin-Opener-Policy": "same-origin",
       "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
       // Defensa en profundidad: solo recursos propios, sin framing, sin exfiltración a hosts externos.
+      // 'wasm-unsafe-eval': habilita SOLO la compilación de WebAssembly (motor OCR Tesseract,
+      // vendorizado y local). Es el permiso angosto para WASM — NO habilita eval() de JS.
       "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; " +
-        "script-src 'self' 'unsafe-inline'; worker-src 'self' blob:; connect-src 'self'; font-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; font-src 'self'; " +
         "object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; frame-ancestors 'none'",
     });
     res.end(data);
