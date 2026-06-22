@@ -7,6 +7,12 @@ npm-debug.log
 .env
 .env.*
 
+# Archivos de build/dev que no sirven en runtime (Dockle DKL-LI-0003)
+Dockerfile
+docker-compose.yml
+.dockerignore
+.gitattributes
+
 # Datos / artefactos / temporales — no van en la imagen
 *.db
 *.db-wal

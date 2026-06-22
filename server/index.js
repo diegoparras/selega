@@ -21,9 +21,10 @@ const server = http.createServer(async (req, res) => {
   const path = decodeURIComponent(req.url.split("?")[0]);
   try {
     if (path === "/api" || path.startsWith("/api/")) return await handle(req, res, path);
-    if (BLOQUEADO(path)) { res.writeHead(403); return res.end("forbidden"); }
+    const txt = { "Content-Type": "text/plain; charset=utf-8", "X-Content-Type-Options": "nosniff" };
+    if (BLOQUEADO(path)) { res.writeHead(403, txt); return res.end("forbidden"); }
     const file = normalize(join(root, path === "/" ? "/index.html" : path));
-    if (!file.startsWith(root)) { res.writeHead(403); return res.end("forbidden"); }
+    if (!file.startsWith(root)) { res.writeHead(403, txt); return res.end("forbidden"); }
     const data = await readFile(file);
     // Los vendors (pdf.js/tesseract/pdf-lib/fuentes, ~24MB) son INMUTABLES → cache larga
     // (evita re-bajarlos en cada OCR). El HTML/JS/CSS de la app se bustea con ?v=N → no-cache.
@@ -34,14 +35,16 @@ const server = http.createServer(async (req, res) => {
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
       "Referrer-Policy": "no-referrer",
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
       // Defensa en profundidad: solo recursos propios, sin framing, sin exfiltración a hosts externos.
       "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; " +
         "script-src 'self' 'unsafe-inline'; worker-src 'self' blob:; connect-src 'self'; font-src 'self'; " +
-        "object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+        "object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; frame-ancestors 'none'",
     });
     res.end(data);
   } catch {
-    res.writeHead(404); res.end("not found");
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }); res.end("not found");
   }
 });
 
