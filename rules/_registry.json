@@ -1,0 +1,29 @@
+{
+  "_comment": "Registro de jurisdicciones AR. Cada Consejo Profesional define su rule-pack. 'completo' = reglas cargadas; 'plantilla' = hereda de _base y se completa desde Admin.",
+  "jurisdicciones": [
+    { "id": "AR-NQN", "provincia": "Neuquén", "consejo": "CPCEN", "estado": "completo", "pack": "AR-NQN.json" },
+    { "id": "AR-C",   "provincia": "CABA", "consejo": "CPCECABA", "estado": "plantilla" },
+    { "id": "AR-B",   "provincia": "Buenos Aires", "consejo": "CPCEPBA", "estado": "plantilla" },
+    { "id": "AR-S",   "provincia": "Santa Fe", "consejo": "CPCE Santa Fe", "estado": "plantilla" },
+    { "id": "AR-X",   "provincia": "Córdoba", "consejo": "CPCE Córdoba", "estado": "plantilla" },
+    { "id": "AR-M",   "provincia": "Mendoza", "consejo": "CPCE Mendoza", "estado": "plantilla" },
+    { "id": "AR-R",   "provincia": "Río Negro", "consejo": "CPCE Río Negro", "estado": "plantilla" },
+    { "id": "AR-U",   "provincia": "Chubut", "consejo": "CPCE Chubut", "estado": "plantilla" },
+    { "id": "AR-Z",   "provincia": "Santa Cruz", "consejo": "CPCE Santa Cruz", "estado": "plantilla" },
+    { "id": "AR-V",   "provincia": "Tierra del Fuego", "consejo": "CPCE TDF", "estado": "plantilla" },
+    { "id": "AR-La Pampa", "provincia": "La Pampa", "consejo": "CPCE La Pampa", "estado": "plantilla" },
+    { "id": "AR-E",   "provincia": "Entre Ríos", "consejo": "CPCE Entre Ríos", "estado": "plantilla" },
+    { "id": "AR-W",   "provincia": "Corrientes", "consejo": "CPCE Corrientes", "estado": "plantilla" },
+    { "id": "AR-N",   "provincia": "Misiones", "consejo": "CPCE Misiones", "estado": "plantilla" },
+    { "id": "AR-H",   "provincia": "Chaco", "consejo": "CPCE Chaco", "estado": "plantilla" },
+    { "id": "AR-P",   "provincia": "Formosa", "consejo": "CPCE Formosa", "estado": "plantilla" },
+    { "id": "AR-Y",   "provincia": "Jujuy", "consejo": "CPCE Jujuy", "estado": "plantilla" },
+    { "id": "AR-A",   "provincia": "Salta", "consejo": "CPCE Salta", "estado": "plantilla" },
+    { "id": "AR-T",   "provincia": "Tucumán", "consejo": "CPCE Tucumán", "estado": "plantilla" },
+    { "id": "AR-K",   "provincia": "Catamarca", "consejo": "CPCE Catamarca", "estado": "plantilla" },
+    { "id": "AR-F",   "provincia": "La Rioja", "consejo": "CPCE La Rioja", "estado": "plantilla" },
+    { "id": "AR-J",   "provincia": "San Juan", "consejo": "CPCE San Juan", "estado": "plantilla" },
+    { "id": "AR-D",   "provincia": "San Luis", "consejo": "CPCE San Luis", "estado": "plantilla" },
+    { "id": "AR-G",   "provincia": "Santiago del Estero", "consejo": "CPCE Sgo. del Estero", "estado": "plantilla" }
+  ]
+}

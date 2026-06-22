@@ -1,0 +1,119 @@
+{
+  "jurisdiccion": "AR-NQN",
+  "consejo": "CPCEN",
+  "nombre": "Consejo Profesional de Ciencias Económicas del Neuquén",
+  "norma_base": "Res. 141 CPCEN y modificatorias",
+  "version": "2026.1",
+  "fuente": "Guía de controles 2026 (CPCEN)",
+  "cruces": {
+    "habilitados": [1, 2, 3, 4, 5, 51, 6, 7, 8, 9, 10, 11, 12, 13],
+    "consecuencia_difiere": "denegacion_directa",
+    "tolerancia": 1.0
+  },
+  "consecuencias": {
+    "denegacion_directa": "Se devuelve el trabajo (causal de denegación directa).",
+    "subsanable_tasa_borrador": "Corregir solo si abona tasa borrador (Res. 622/19).",
+    "se_certifica_firma": "Se certifica solo la firma, no se legaliza plenamente.",
+    "se_legaliza": "Se legaliza.",
+    "observacion": "Observación a registrar."
+  },
+  "secciones": [
+    { "id": 1, "titulo": "Actuaciones profesionales / Legalización web", "ref": "Res. 651/653/654",
+      "controles": [
+        { "id": "1.1", "texto": "Legalización web sobre requisitos/responsabilidad/legalidad", "ref": "Res. 651", "consecuencia": "observacion" }
+      ] },
+    { "id": 2, "titulo": "Jurisdicción", "ref": "Res. 141 pto 1 / Ley 671 / CCyC art. 73-74",
+      "controles": [
+        { "id": "2.1", "texto": "Domicilio del comitente en la jurisdicción; coincide con el domicilio legal", "ref": "Res. 141 pto 1", "consecuencia": "denegacion_directa" },
+        { "id": "2.2", "texto": "Identificar domicilio real o legal (CCyC art. 73/74)", "ref": "Ley 26.994", "consecuencia": "observacion" }
+      ] },
+    { "id": 3, "titulo": "Del profesional", "ref": "Res. 141 pto 2 / Ley 671",
+      "controles": [
+        { "id": "3.1", "texto": "Matrícula habilitada (T° y F° legibles)", "ref": "Res. 141 pto 2", "consecuencia": "denegacion_directa" },
+        { "id": "3.2", "texto": "Libre de sanciones inhabilitantes", "ref": "Res. 141 pto 2.2", "consecuencia": "denegacion_directa" },
+        { "id": "3.3", "texto": "Derecho anual de ejercicio al día / acreditación de pago", "ref": "Res. 141 pto 2.3-2.4", "consecuencia": "denegacion_directa" },
+        { "id": "3.4", "texto": "Inscripto como socio de la sociedad registrada (RAPU, T°/F°)", "ref": "Res. 141 pto 2.5", "consecuencia": "observacion" }
+      ] },
+    { "id": 4, "titulo": "De la firma", "ref": "Res. 141 pto 3 / Res. 400",
+      "controles": [
+        { "id": "4.1", "texto": "Ológrafa, indeleble, legible, con aclaración", "ref": "Res. 141 pto 3.1", "consecuencia": "se_certifica_firma" },
+        { "id": "4.2", "texto": "Título, universidad, T°/F° y sigla CPCEN", "ref": "Res. 141 pto 3", "consecuencia": "observacion" }
+      ] },
+    { "id": 5, "titulo": "Incumbencia e independencia", "ref": "RT 37 cap. II.A",
+      "controles": [
+        { "id": "5.1", "texto": "El acto es de incumbencia profesional", "ref": "Res. 141 pto 4", "consecuencia": "denegacion_directa" },
+        { "id": "5.2", "texto": "Cumple requisitos de independencia (RT 37)", "ref": "RT 37 II.A", "consecuencia": "observacion" }
+      ] },
+    { "id": 6, "titulo": "Informe profesional", "ref": "Res. 141 pto 5",
+      "controles": [
+        { "id": "6.1", "texto": "Indeleble, sin enmiendas; PDF legible (máx. 10 MB)", "ref": "Res. 141 pto 5.1 / Res. 651", "consecuencia": "observacion" },
+        { "id": "6.2", "texto": "Idioma nacional; título y subtítulos; destinatario", "ref": "Res. 141 pto 5.2-5.5", "consecuencia": "observacion" },
+        { "id": "6.3", "texto": "UIF: procedimientos PLA/FT si corresponde", "ref": "Res. JG 635/24", "consecuencia": "observacion" },
+        { "id": "6.4", "texto": "Denominación del comitente en todos los párrafos; fechas", "ref": "MST A-34", "consecuencia": "observacion" }
+      ] },
+    { "id": 7, "titulo": "Informe especial de flujo proyectado", "ref": "MST A-25",
+      "controles": [
+        { "id": "7.1", "texto": "No requiere art. 10 (encargo de aseguramiento distinto)", "ref": "MST A-25", "consecuencia": "observacion" }
+      ] },
+    { "id": 8, "titulo": "Manifestación de bienes y otros (art. 10)", "ref": "MST A-25 / art. 10 ley 17.250",
+      "controles": [
+        { "id": "8.1", "texto": "Consigna deuda devengada y exigible con cajas previsionales", "ref": "art. 10 ley 17.250", "consecuencia": "observacion" }
+      ] },
+    { "id": 9, "titulo": "Comitente", "ref": "Res. 141 pto 5.5.3 / RT 8",
+      "controles": [
+        { "id": "9.1", "texto": "Carátula: datos del ente e inscripción; capital; actividad", "ref": "RT 8 cap. VII", "consecuencia": "observacion" },
+        { "id": "9.2", "texto": "Fechas de inicio y cierre; número de ejercicio", "ref": "RT 8 VII B1a", "consecuencia": "observacion" },
+        { "id": "9.3", "texto": "Ejercicio irregular (≤18 meses primer ejercicio)", "ref": "MST C-35", "consecuencia": "observacion" }
+      ] },
+    { "id": 10, "titulo": "Correlatividad de ejercicios y reingresos", "ref": "MEMO A-61 / Res. 651/20",
+      "controles": [
+        { "id": "10.1", "texto": "Fechas de cierre coherentes con el nº de ejercicio; sin duplicidad", "ref": "MEMO A-61", "consecuencia": "observacion" }
+      ] },
+    { "id": 11, "titulo": "Estados contables", "ref": "Res. 141 pto 5.5 y 6 — AQUÍ VIVEN LOS CRUCES",
+      "controles": [
+        { "id": "11.1", "texto": "Detalle taxativo de estados, anexos y notas", "ref": "Res. 141 pto 5.5.4", "consecuencia": "denegacion_directa" },
+        { "id": "11.2", "texto": "Alcance, opinión/certificación/abstención presentes", "ref": "Res. 141 pto 5.5.5-5.5.6", "consecuencia": "denegacion_directa" },
+        { "id": "11.3", "texto": "Aplica RT vigentes; contenido legible; EECC básicos completos", "ref": "Res. 141 pto 5.5.4", "consecuencia": "denegacion_directa" },
+        { "id": "11.4", "texto": "Lugar y fecha de emisión", "ref": "Res. 141 pto 5.5.9", "consecuencia": "denegacion_directa" },
+        { "id": "11.5", "texto": "Firma y sello en todas las hojas de la documentación", "ref": "Res. 141 pto 6.4", "consecuencia": "se_certifica_firma" }
+      ] },
+    { "id": 12, "titulo": "Tasa borrador", "ref": "Res. 622/19",
+      "controles": [
+        { "id": "12.1", "texto": "Sin firma: se devuelve 'borrador controlado, se aguarda reingreso'", "ref": "Res. 622/19", "consecuencia": "subsanable_tasa_borrador" }
+      ] },
+    { "id": 13, "titulo": "Tasa urgente", "ref": "Res. 676/21",
+      "controles": [
+        { "id": "13.1", "texto": "Con observación pierde el carácter de urgente; sin observación legaliza en 24 hs", "ref": "Res. 676/21", "consecuencia": "observacion" }
+      ] },
+    { "id": 14, "titulo": "Balances rectificativos", "ref": "Res. 726/25 / MEMO A-61",
+      "controles": [
+        { "id": "14.1", "texto": "Párrafo de énfasis sobre rectificación en informe, notas y encabezados", "ref": "Res. 726/25", "consecuencia": "observacion" }
+      ] },
+    { "id": 15, "titulo": "Certificación de ingresos personales", "ref": "Res. 141 / RT 37",
+      "principales_secundarios": true,
+      "controles": [
+        { "id": "15.1", "texto": "Matriculado sin deuda; sin diferencias de tasas; sello T°/F° correcto", "clase": "principal", "consecuencia": "observacion" },
+        { "id": "15.2", "texto": "Título 'Ingresos Personales'; CUIT y domicilio (jurisdicción NQN) correctos", "clase": "principal", "consecuencia": "observacion" },
+        { "id": "15.3", "texto": "Monto en números coincide con letras; datos vs DDJJ", "clase": "principal", "consecuencia": "observacion" },
+        { "id": "15.4", "texto": "Menciona destinatario, RT 37, CPCEN (si falla un principal)", "clase": "secundario", "consecuencia": "observacion" }
+      ] },
+    { "id": 16, "titulo": "Licitud de fondos", "ref": "Res. 141 / RG 5505/24",
+      "principales_secundarios": true,
+      "controles": [
+        { "id": "16.1", "texto": "Controles del profesional, firma y comitente (principales)", "clase": "principal", "consecuencia": "observacion" },
+        { "id": "16.2", "texto": "Datos del rodado/inmueble; nº factura/monto que justifica fondos", "clase": "principal", "consecuencia": "observacion" },
+        { "id": "16.3", "texto": "Tipo de cambio si compra en moneda extranjera (si falla un principal)", "clase": "secundario", "consecuencia": "observacion" }
+      ] },
+    { "id": 17, "titulo": "Manifestación de bienes y deudas", "ref": "Res. 141 / RT 37",
+      "principales_secundarios": true,
+      "controles": [
+        { "id": "17.1", "texto": "Cruce A − P = PN de la manifestación", "clase": "principal", "consecuencia": "denegacion_directa" },
+        { "id": "17.2", "texto": "Concordancia con el alcance de la certificación; fecha de corte", "clase": "principal", "consecuencia": "observacion" },
+        { "id": "17.3", "texto": "Deuda SIPA a la fecha de corte; unidad de medida", "clase": "principal", "consecuencia": "observacion" }
+      ] },
+    { "id": 18, "titulo": "Formulario 4501 (precios de transferencia)", "ref": "Cancillería",
+      "controles": [
+        { "id": "18.1", "texto": "Firmas del área técnica registradas en Cancillería", "ref": "Form. 4501", "consecuencia": "observacion" }
+      ] }
+  ]
+}

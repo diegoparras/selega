@@ -1,0 +1,16 @@
+{
+  "name": "selega",
+  "version": "1.0.0",
+  "description": "Selega — Control de Estados Contables para Legalizaciones. Asistente para Secretarías Técnicas de Consejos Profesionales de Ciencias Económicas (multi-jurisdicción AR). Local, exacto, validado por cruces. Parte de la familia Escriba.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "node server/index.js",
+    "serve": "node server/index.js",
+    "test": "node test/test-core.mjs"
+  },
+  "dependencies": {
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.22.0"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "_comment": "Plantilla base que heredan las jurisdicciones sin pack propio. Los cruces numéricos son universales (normas FACPCE rigen en todo el país); el catálogo de controles formales y sus consecuencias los completa cada Consejo desde Admin.",
+  "norma_base": "A definir por el Consejo",
+  "version": "base.1",
+  "cruces": {
+    "habilitados": [1, 2, 3, 4, 5, 51, 6, 7, 8, 9, 10, 11, 12, 13],
+    "consecuencia_difiere": "denegacion_directa",
+    "tolerancia": 1.0
+  },
+  "consecuencias": {
+    "denegacion_directa": "Se devuelve el trabajo.",
+    "subsanable_tasa_borrador": "Corregir solo si abona tasa borrador.",
+    "se_certifica_firma": "Se certifica solo la firma.",
+    "se_legaliza": "Se legaliza.",
+    "observacion": "Observación a registrar."
+  },
+  "secciones": [
+    { "id": 1, "titulo": "Del profesional (matrícula, sanciones, derecho de ejercicio)", "controles": [
+      { "id": "1.1", "texto": "Matrícula habilitada y al día", "consecuencia": "denegacion_directa" } ] },
+    { "id": 2, "titulo": "De la firma", "controles": [
+      { "id": "2.1", "texto": "Firma ológrafa, aclaración, T°/F° y sigla del Consejo", "consecuencia": "se_certifica_firma" } ] },
+    { "id": 3, "titulo": "Estados contables (cruces y denegación directa)", "controles": [
+      { "id": "3.1", "texto": "EECC básicos completos; alcance y opinión presentes", "consecuencia": "denegacion_directa" },
+      { "id": "3.2", "texto": "Firma y sello en todas las hojas", "consecuencia": "se_certifica_firma" } ] }
+  ]
+}

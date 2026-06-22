@@ -1,0 +1,23 @@
+# Dependencias
+node_modules/
+
+# Secretos / entorno — NUNCA subir
+.env
+.env.*
+!.env.example
+
+# Bases de datos locales (dev/preview) — datos, no código
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+
+# Config y artefactos locales de tooling / capturas
+.claude/
+*.log
+public/*-shot.png
+public/familia-lineup.png
+
+# OS
+.DS_Store
+Thumbs.db

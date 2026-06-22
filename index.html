@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Selega — Control de Estados Contables para Legalizaciones</title>
+  <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
+  <script>if (localStorage.getItem("selega.theme") === "dark") document.documentElement.dataset.theme = "dark";</script>
+  <link rel="stylesheet" href="./styles/app.css?v=37" />
+</head>
+<body>
+  <div id="login" class="login-overlay hidden">
+    <form id="login-form" class="login-card">
+      <img class="logo" src="./public/logo.svg" width="52" alt="Selega" />
+      <h2>Selega</h2>
+      <p class="login-sub">Control de Estados Contables para Legalizaciones</p>
+      <input id="login-email" type="text" placeholder="Usuario" autocomplete="username" required />
+      <input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" required />
+      <button type="submit">Ingresar</button>
+      <div id="login-err" class="login-err"></div>
+    </form>
+  </div>
+
+  <header>
+    <a id="btn-inicio" class="logo-link" title="Inicio">
+      <img class="logo brand" src="./public/logo.svg" alt="" />
+      <h1>Selega</h1>
+    </a>
+    <div class="sp"></div>
+    <div class="menu-wrap" id="hdr-menu-wrap">
+      <button class="ghost icon-btn" id="btn-menu" aria-haspopup="true" aria-expanded="false" title="Menú" aria-label="Menú">
+        <svg viewBox="0 0 20 20" width="17" height="17" fill="currentColor" aria-hidden="true"><circle cx="10" cy="4" r="1.7"/><circle cx="10" cy="10" r="1.7"/><circle cx="10" cy="16" r="1.7"/></svg>
+      </button>
+      <div id="hdr-menu" class="menu menu-right hidden">
+        <div class="menu-user" id="user-info"></div>
+        <div class="menu-sep"></div>
+        <label class="menu-jur"><span class="menu-jur-lbl">Jurisdicción</span><select id="jurisdiccion"></select></label>
+        <div class="menu-sep"></div>
+        <button class="menu-item" id="btn-theme">
+          <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><circle cx="10" cy="10" r="6.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 3.6a6.4 6.4 0 000 12.8z" fill="currentColor"/></svg>
+          <span>Tema claro / oscuro</span>
+        </button>
+        <button class="menu-item" id="btn-super">
+          <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3" width="15" height="6" rx="1.5"/><rect x="2.5" y="11" width="15" height="6" rx="1.5"/><circle cx="5.5" cy="6" r=".6" fill="currentColor"/><circle cx="5.5" cy="14" r=".6" fill="currentColor"/></svg>
+          <span>Sistema (Motores)</span>
+        </button>
+        <button class="menu-item" id="btn-admin">
+          <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.5l1.4 2.9 3.2.5-2.3 2.2.5 3.1L10 11.7 7.2 13l.5-3.1L5.4 7.7l3.2-.5z"/><circle cx="10" cy="15.5" r="1"/></svg>
+          <span>Administración</span>
+        </button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" id="btn-logout">
+          <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6V4.5A1.5 1.5 0 019.5 3h5A1.5 1.5 0 0116 4.5v11a1.5 1.5 0 01-1.5 1.5h-5A1.5 1.5 0 018 15.5V14"/><path d="M11 10H3.5M6 7l-3 3 3 3"/></svg>
+          <span>Cerrar sesión</span>
+        </button>
+        <div class="menu-ver">Selega 1.0</div>
+      </div>
+    </div>
+  </header>
+
+  <main id="vista-inicio">
+    <header class="hero">
+      <h1>Cada balance, listo para legalizar.</h1>
+      <p class="sub">Importá el estado contable: Selega extrae las cifras, corre los cruces y propone el desenlace. En segundos y 100% local.</p>
+    </header>
+    <div id="dropzone" class="dz-hero">
+      <div class="dz-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg></div>
+      <strong>Arrastrá el balance acá</strong>
+      <p class="sub2">o seleccionalo desde tu equipo — se lee 100% local, no sale de tu equipo</p>
+      <div class="dz-actions">
+        <button id="btn-pdf-hero">Seleccionar PDF</button>
+        <button id="btn-ejemplo-hero" class="ghost">Cargar ejemplo</button>
+      </div>
+      <p class="dz-foot">o <a class="link" id="btn-bandeja-hero">abrí la bandeja de trabajos</a></p>
+    </div>
+    <footer class="pie">Selega · Parte de la familia Escriba · 100% local salvo la capa de IA (gateada)</footer>
+  </main>
+
+  <main id="vista-control" class="hidden">
+    <div class="toolbar">
+      <input id="comitente" placeholder="Comitente" />
+      <input id="cuit" placeholder="CUIT" style="width:160px" />
+      <button id="btn-ejemplo" class="ghost">Cargar ejemplo</button>
+      <button id="btn-pdf" class="ghost" title="Extracción local del PDF (no sale del servidor)">Importar PDF…</button>
+      <input id="pdf-input" type="file" accept="application/pdf" style="display:none" />
+      <button id="btn-limpiar" class="ghost">Limpiar</button>
+      <button id="btn-formato" class="ghost" title="Separadores de miles/decimal y negativos">Formato</button>
+      <span class="sp" style="flex:1"></span>
+      <button id="btn-guardar-trab" title="Guardar este control como trabajo (Postgres)">Guardar</button>
+      <button id="btn-trabajos" class="ghost">Bandeja</button>
+    </div>
+    <div id="trabajos-panel" class="trabajos-panel hidden">
+      <div class="trab-head"><strong>Bandeja de trabajos</strong><button class="ghost mini" id="btn-cerrar-trab">✕</button></div>
+      <div id="trabajos-lista"></div>
+    </div>
+    <div id="cfg-formato" class="cfg-formato hidden">
+      <label>Miles
+        <select id="fmt-miles">
+          <option value=".">punto&nbsp;&nbsp;1.234</option>
+          <option value=",">coma&nbsp;&nbsp;1,234</option>
+          <option value=" ">espacio&nbsp;&nbsp;1&nbsp;234</option>
+          <option value="">ninguno&nbsp;&nbsp;1234</option>
+        </select>
+      </label>
+      <label>Decimal
+        <select id="fmt-decimal">
+          <option value=",">coma&nbsp;&nbsp;1234,56</option>
+          <option value=".">punto&nbsp;&nbsp;1234.56</option>
+        </select>
+      </label>
+      <label>Negativos
+        <select id="fmt-neg">
+          <option value="adelante">signo adelante&nbsp;&nbsp;-123</option>
+          <option value="atras">signo atrás&nbsp;&nbsp;123-</option>
+          <option value="parentesis">paréntesis&nbsp;&nbsp;(123)</option>
+        </select>
+      </label>
+      <span id="fmt-warn" class="fmt-warn"></span>
+    </div>
+    <div class="workspace">
+    <section id="lienzo" class="panel hidden">
+      <div class="lienzo-bar">
+        <strong>Documento</strong>
+        <span class="btn-group">
+          <button class="ghost mini" id="z-out" title="Alejar" aria-label="Alejar">−</button>
+          <button class="ghost mini" id="z-in" title="Acercar" aria-label="Acercar">+</button>
+        </span>
+        <div class="menu-wrap">
+          <button class="ghost mini" id="btn-herramientas" aria-haspopup="true" aria-expanded="false">Herramientas <span class="caret">▾</span></button>
+          <div id="herramientas-menu" class="menu hidden">
+            <button class="menu-item" id="ocr-todo">Leer con OCR <span class="mi-sub">local</span></button>
+            <button class="menu-item" id="btn-ia">Leer con IA <span class="mi-sub">nube gateada</span></button>
+            <button class="menu-item" id="guardar-plantilla">Guardar como plantilla</button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" id="rotar-todo">Rotar todo el documento</button>
+            <label class="menu-item menu-switch"><span>Auto-enderezar al cargar</span>
+              <input type="checkbox" id="chk-auto"><span class="track"></span></label>
+            <div class="menu-sep"></div>
+            <button class="menu-item" id="guardar-pdf">Guardar PDF (con rotaciones)</button>
+          </div>
+        </div>
+        <span id="lienzo-info" class="badge"></span>
+        <span class="sp"></span>
+        <span id="hint-region" class="hint">Tocá una cifra y marcá un recuadro sobre el PDF para leerla (OCR)</span>
+        <button class="ghost mini" id="cerrar-lienzo" title="Cerrar documento" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="pdf-nav">
+        <button class="ghost mini" id="nav-prev" title="Página anterior">‹</button>
+        <input type="range" id="pdf-slider" class="pdf-slider" min="1" max="1" value="1" title="Deslizá para navegar las páginas" />
+        <button class="ghost mini" id="nav-next" title="Página siguiente">›</button>
+        <span class="pdf-pag"><input type="number" id="pdf-pag-num" min="1" value="1" title="Escribí la página y Enter" /> <span class="pdf-pag-sep">/</span> <span id="pdf-pag-total">1</span></span>
+      </div>
+      <div id="ocr-progreso" class="ocr-prog hidden">
+        <div class="ocr-prog-bar"><div class="ocr-prog-fill" id="ocr-prog-fill"></div></div>
+        <div class="ocr-prog-label"><span id="ocr-prog-txt"></span><span id="ocr-prog-eta"></span></div>
+      </div>
+      <div class="visor">
+        <div class="visor-rotar">
+          <button id="rot-izq" title="Girar la página a la izquierda" aria-label="Girar a la izquierda">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4.5v4h4"/></svg>
+          </button>
+          <button id="rot-der" title="Girar la página a la derecha" aria-label="Girar a la derecha">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1 -2.6-6.4"/><path d="M21 4.5v4h-4"/></svg>
+          </button>
+        </div>
+        <div id="pdf-host" class="pdf-host"></div>
+      </div>
+    </section>
+    <aside class="rail" id="rail">
+      <div class="veredicto" id="veredicto">
+        <div class="ver-top"><span class="ver-dot" id="ver-dot"></span><strong class="ver-txt" id="desenlace">—</strong></div>
+        <ul id="motivos" class="ver-motivos"></ul>
+        <div class="ver-actions">
+          <button id="btn-confirmar">Confirmar y guardar</button>
+          <button id="btn-observar" class="ghost">Revisar todo</button>
+        </div>
+      </div>
+      <details class="bloque" id="bq-cruces" open>
+        <summary><span class="bq-grip" aria-hidden="true"></span><span class="bq-tit">Cruces numéricos</span><span class="bq-chip neutral" id="chip-cruces"></span></summary>
+        <div class="bq-body"><div id="cruces"></div><div id="resumen-cruces" class="resumen-cruces"></div></div>
+      </details>
+      <details class="bloque" id="bq-cifras">
+        <summary><span class="bq-grip" aria-hidden="true"></span><span class="bq-tit">Cifras de los EECC</span><span class="bq-chip neutral" id="chip-cifras"></span></summary>
+        <div class="bq-body"><div class="cifras" id="cifras"></div></div>
+      </details>
+      <details class="bloque" id="bq-controles">
+        <summary><span class="bq-grip" aria-hidden="true"></span><span class="bq-tit">Controles formales</span><span class="bq-chip neutral" id="chip-controles"></span></summary>
+        <div class="bq-body" id="checklist"></div>
+      </details>
+    </aside>
+    </div>
+  </main>
+
+  <main id="vista-bandeja" class="hidden">
+    <div class="bandeja-wrap">
+      <header class="bandeja-head">
+        <div>
+          <h1 id="bandeja-titulo">Bandeja del Consejo</h1>
+          <p class="sub" id="bandeja-sub"></p>
+        </div>
+        <button id="btn-nuevo-bandeja" class="ghost">Importar balance</button>
+      </header>
+      <div id="bandeja-lista" class="bandeja-lista"></div>
+    </div>
+  </main>
+
+  <main id="vista-expediente" class="hidden"></main>
+
+  <main id="vista-super" class="hidden"></main>
+
+  <main id="vista-admin" class="hidden"></main>
+
+  <script type="module" src="./src/app.js?v=48"></script>
+</body>
+</html>

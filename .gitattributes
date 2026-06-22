@@ -1,0 +1,11 @@
+# Normalizá los finales de línea a LF en el repo (consistencia cross-plataforma)
+* text=auto eol=lf
+
+# Binarios (no tocar)
+*.woff2 binary
+*.woff binary
+*.wasm binary
+*.png binary
+*.ico binary
+*.traineddata binary
+*.gz binary

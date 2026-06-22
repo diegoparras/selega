@@ -1,0 +1,19 @@
+// config.js — configuración del backend desde variables de entorno.
+// La API key de OpenRouter NUNCA llega al navegador: vive acá (env) o en la tabla
+// config del servidor. El cliente solo habla con /api/llm (proxy).
+export const config = {
+  port: Number(process.env.PORT) || 8080,
+  // PostgreSQL: el datastore en serio (historial/auditoría/packs concurrente y durable).
+  // En Docker, DATABASE_URL apunta al servicio `db`. Sin env (dev local), usamos el
+  // Postgres del compose expuesto en 127.0.0.1:55432 (IPv4 explícito por Node 17+).
+  databaseUrl: process.env.DATABASE_URL || "postgresql://selega:selega@127.0.0.1:55432/selega",
+  // Si está en env, tiene prioridad y ni se guarda en la base.
+  openrouterKeyEnv: process.env.OPENROUTER_KEY || "",
+  adminEmail: process.env.SELEGA_ADMIN_EMAIL || "admin@selega.local",
+  adminPass: process.env.SELEGA_ADMIN_PASS || "", // si vacío, se genera y se imprime una vez
+  cookieName: "selega_session",
+  sessionTtlMs: 1000 * 60 * 60 * 12, // 12 h
+  // Poné SELEGA_SECURE_COOKIE=1 cuando Selega esté detrás de TLS (reverse proxy / HTTPS):
+  // la cookie de sesión solo viaja por HTTPS. En dev/HTTP local queda en 0.
+  cookieSecure: process.env.SELEGA_SECURE_COOKIE === "1",
+};

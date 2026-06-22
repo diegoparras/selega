@@ -1,0 +1,19 @@
+# node_modules del host NO debe entrar: better-sqlite3 es nativo y el binario de
+# Windows rompe el contenedor Linux. La imagen hace su propio npm install.
+node_modules
+npm-debug.log
+
+# Secretos — NO van en la imagen (el compose los pasa por entorno en runtime)
+.env
+.env.*
+
+# Datos / artefactos / temporales — no van en la imagen
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*-shot.png
+public/familia-lineup.png
+.git
+.gitignore
+_*

@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: selega-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-selega}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Definí POSTGRES_PASSWORD en .env (copiá .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:-selega}
+    ports:
+      - "127.0.0.1:55432:5432"   # SOLO localhost para dev/preview. En producción sacá esta línea.
+    volumes:
+      - selega-pg:/var/lib/postgresql/data   # la base persiste en el volumen
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-selega} -d ${POSTGRES_DB:-selega}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  selega:
+    build: .
+    image: selega
+    container_name: selega
+    ports:
+      - "${SELEGA_PORT:-8088}:8080"          # host → contenedor 8080
+    environment:
+      SELEGA_ADMIN_EMAIL: ${SELEGA_ADMIN_EMAIL:-admin@selega.local}
+      SELEGA_ADMIN_PASS: ${SELEGA_ADMIN_PASS:-}        # vacío → se genera y se imprime UNA vez en los logs
+      SELEGA_SECURE_COOKIE: ${SELEGA_SECURE_COOKIE:-0} # poné 1 detrás de TLS (reverse proxy / HTTPS)
+      OPENROUTER_KEY: ${OPENROUTER_KEY:-}              # opcional: la IA en la nube; mejor cargarla desde Admin
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-selega}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-selega}"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  selega-pg:
