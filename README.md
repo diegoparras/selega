@@ -162,6 +162,10 @@ Antes de exponerlo a internet, leé [SECURITY.md](SECURITY.md). En resumen:
 - **Secretos fuertes** en `.env` (nunca subas `.env` a git). `SELEGA_ADMIN_PASS` vacío → autogenerada.
 - **Cerrá el puerto de Postgres** (no exponer `db` al host en producción).
 - **Backups** del volumen `selega-pg` — es el registro de legalizaciones.
+- **Una instancia por Consejo.** El aislamiento es por-instalación: dentro de una instancia, los
+  roles con "ver todo" ven los expedientes de **todas** las jurisdicciones cargadas. Si dos Consejos
+  deben estar aislados entre sí, desplegá **una instancia separada para cada uno** (ver el *Modelo de
+  aislamiento* en [SECURITY.md](SECURITY.md)).
 
 El contenedor corre como **usuario no-root**, con CSP + security headers, scrypt, sesión HMAC,
 lockout de login y queries parametrizadas. Auditado con semgrep / OWASP ZAP / Trivy / gitleaks

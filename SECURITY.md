@@ -17,6 +17,30 @@ La seguridad es prioridad de diseño. Si encontrás una vulnerabilidad, reportal
 - Roles con gating server-side (agente/supervisor/auditor/admin/superadmin); IDOR y escalada
   de privilegios verificados.
 
+## Modelo de aislamiento — **una instancia por Consejo** (invariante)
+
+El aislamiento de datos en Selega es **por-instalación, no por-usuario**. Tenelo presente al desplegar:
+
+- **"Multi-jurisdicción" es de configuración, no de aislamiento.** Una misma instalación puede
+  cargar las cifras, cruces y checklist de varias jurisdicciones (para una Secretaría Técnica que
+  atiende varias), pero **eso no separa a los usuarios por jurisdicción**. No existe una columna
+  `jurisdiccion` en `users` ni un filtro por jurisdicción en los expedientes.
+- **Dentro de una instalación, los roles con "ver todo" (supervisor / auditor / admin / superadmin)
+  ven y operan TODOS los expedientes de esa instalación**, sin importar la jurisdicción del trabajo.
+  Es intencional: se asume que una instalación = una organización (un Consejo / Secretaría) cuyo
+  personal jerárquico puede ver todo lo de esa organización. El rol **agente** sí queda confinado a
+  sus propios trabajos.
+
+> **Invariante de despliegue:** **desplegá una instancia de Selega separada por cada Consejo /
+> Secretaría Técnica que deba estar aislado del resto** (su propio contenedor, su propio volumen
+> Postgres, su propia URL). **No compartas una sola instancia entre Consejos independientes** que no
+> deban ver los expedientes del otro: en una instancia compartida, un supervisor/auditor/admin del
+> Consejo A vería y podría editar/firmar los EECC del Consejo B.
+
+Selega NO soporta hoy aislar entre sí a usuarios de distintas jurisdicciones **dentro de una misma
+instancia**; si en el futuro un único organismo lo necesitara, requeriría agregar `users.jurisdiccion`
+y filtrar los listados y las acciones (ver/editar/revisar/firmar) por la jurisdicción del usuario.
+
 ## Auditoría (2026-06)
 
 Toolchain profesional, todo verde salvo los riesgos aceptados de abajo:
