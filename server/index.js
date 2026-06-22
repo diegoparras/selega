@@ -75,7 +75,9 @@ server.on("listening", () => {
 (async () => {
   try { await initDb(); passGenerada = await seedAdmin(); dbOk = true; }
   catch (e) {
-    console.warn("  ⚠ No se pudo inicializar Postgres:", e.message || e.code || String(e), "| url:", config.databaseUrl);
+    // Enmascarar la password de la URL: estos logs se miran/comparten para diagnosticar (README).
+    const urlSegura = String(config.databaseUrl || "").replace(/:[^:@/]+@/, ":****@");
+    console.warn("  ⚠ No se pudo inicializar Postgres:", e.message || e.code || String(e), "| url:", urlSegura);
     if (e.errors) console.warn("     causas:", e.errors.map((x) => x.message || x.code).join("; "));
   }
   server.listen(port);

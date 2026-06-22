@@ -11,7 +11,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Gate de calidad: ningún cruce se publica a :latest sin que los tests del núcleo pasen.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Tests del núcleo (cruces + motor)
+        run: npm test
+
   build-push:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read

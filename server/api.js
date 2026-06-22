@@ -282,6 +282,9 @@ export async function handle(req, res, path) {
         const r = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST",
           headers: { Authorization: `Bearer ${cloudKey}`, "Content-Type": "application/json", "X-Title": "Selega" },
           body: JSON.stringify({ model, messages: [{ role: "system", content: system }, { role: "user", content: userContent }],
+            // EECC de terceros: prohibir retención/entrenamiento del proveedor. OpenRouter
+            // rutea solo a proveedores con política de NO conservar el prompt (ZDR).
+            provider: { data_collection: "deny" },
             ...(schema && { response_format: { type: "json_schema", json_schema: { name: "cifras", schema } } }) }) });
         if (!r.ok) throw new Error(`OpenRouter ${r.status}`);
         const data = await r.json();
