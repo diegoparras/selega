@@ -585,14 +585,24 @@ async function init() {
   montarCifras();
   const registro = await cargarRegistro();
   registroGlobal = registro;                 // completo (para resolver packs de trabajos viejos)
-  // El superadmin scopea qué jurisdicciones atiende el install; el selector muestra solo esas.
-  const visibles = jurisHabilitadas.length ? registro.filter((j) => jurisHabilitadas.includes(j.id)) : registro;
-  const jurs = visibles.length ? visibles : registro;
+  // El superadmin scopea qué jurisdicciones atiende el install; el selector muestra SOLO esas.
+  // Fail-closed: si hay scope ([ids] no vacío) se respeta aunque filtre a pocas. NO se vuelve a
+  // "todas" si el filtro queda vacío (eso era fail-open: el agente vería jurisdicciones que el
+  // install no atiende). Sin scope ([]) = todas.
+  const jurs = jurisHabilitadas.length
+    ? registro.filter((j) => jurisHabilitadas.includes(j.id))
+    : registro;
   const sel = $("#jurisdiccion");
-  sel.innerHTML = jurs.map((j) => `<option value="${esc(j.id)}">${esc(j.provincia)} — ${esc(j.consejo)}${j.estado === "completo" ? " ✓" : ""}</option>`).join("");
-  sel.disabled = jurs.length <= 1;   // una sola jurisdicción → no hay qué elegir
-  sel.addEventListener("change", () => cambiarJurisdiccion(registroGlobal.find((j) => j.id === sel.value)));
-  await cambiarJurisdiccion(jurs[0]);
+  if (!jurs.length) {
+    // Scope con ids que ya no existen en el registro: estado inválido → avisar, no romper la app.
+    sel.innerHTML = `<option value="">(sin jurisdicciones habilitadas)</option>`;
+    sel.disabled = true;
+  } else {
+    sel.innerHTML = jurs.map((j) => `<option value="${esc(j.id)}">${esc(j.provincia)} — ${esc(j.consejo)}${j.estado === "completo" ? " ✓" : ""}</option>`).join("");
+    sel.disabled = jurs.length <= 1;   // una sola jurisdicción → no hay qué elegir
+    sel.addEventListener("change", () => cambiarJurisdiccion(registroGlobal.find((j) => j.id === sel.value)));
+    await cambiarJurisdiccion(jurs[0]);
+  }
 
   const cargarEjemplo = () => { cifras = { ...EJEMPLO }; pintarCifras(); recomputar(); acomodarBloques(); mostrarControl(); };
   $("#btn-ejemplo").onclick = cargarEjemplo;
@@ -839,7 +849,7 @@ async function init() {
       ocultarVistas();
       va.classList.remove("hidden");
       // El admin ve SOLO las jurisdicciones habilitadas (todas las pantallas).
-      montarAdmin(va, jurs, () => cambiarJurisdiccion(registroGlobal.find((j) => j.id === sel.value)));
+      montarAdmin(va, jurs, () => cambiarJurisdiccion(registroGlobal.find((j) => j.id === sel.value)), rolActual);
     } else { irAHome(); }
   };
   $("#btn-super").onclick = () => {

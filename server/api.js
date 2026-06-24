@@ -364,7 +364,11 @@ export async function handle(req, res, path) {
   // ---- admin ----
   if (seg[1] === "admin") {
     if (!isAdmin) return json(res, 403, { error: "solo admin" });
-    if (path === "/api/admin/users" && m === "GET") return json(res, 200, await repo.listUsers());
+    if (path === "/api/admin/users" && m === "GET") {
+      // Un admin NO ve a los superadmins (aislamiento de roles); el superadmin ve a todos.
+      const users = await repo.listUsers();
+      return json(res, 200, esSuperadmin ? users : users.filter((u) => u.role !== "superadmin"));
+    }
     if (path === "/api/admin/users" && m === "POST") {
       const b = await readBody(req);
       if (!b.email || !b.pass) return json(res, 400, { error: "email y contraseña requeridos" });
@@ -375,6 +379,11 @@ export async function handle(req, res, path) {
     }
     if (seg[2] === "users" && seg[3] && m === "PUT") {
       const id = Number(seg[3]), b = await readBody(req);
+      // Un admin no puede tocar a un superadmin (ni verlo): defensa además del filtro del listado.
+      if (!esSuperadmin) {
+        const target = (await repo.listUsers()).find((u) => u.id === id);
+        if (target && target.role === "superadmin") return json(res, 403, { error: "no podés modificar a un superadmin" });
+      }
       if (b.role != null) {
         if (!ROLES.includes(b.role)) return json(res, 400, { error: "rol inválido" });
         if ((b.role === "superadmin" || b.role === "admin") && !esSuperadmin) return json(res, 403, { error: "solo un superadmin nombra admins" });
@@ -387,6 +396,10 @@ export async function handle(req, res, path) {
     if (seg[2] === "users" && seg[3] && m === "DELETE") {
       const id = Number(seg[3]);
       if (user.id === id) return json(res, 400, { error: "no podés borrarte a vos mismo" });
+      if (!esSuperadmin) {
+        const target = (await repo.listUsers()).find((u) => u.id === id);
+        if (target && target.role === "superadmin") return json(res, 403, { error: "no podés borrar a un superadmin" });
+      }
       await repo.deleteUser(id); await repo.auditar(user.email, null, "borrar_usuario", String(id));
       return json(res, 200, { ok: true });
     }

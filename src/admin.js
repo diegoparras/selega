@@ -7,7 +7,10 @@ import { montarConstructorCruces } from "./admin-cruces.js";
 import { montarConstructorChecklist } from "./admin-checklist.js";
 import { aviso, confirmar } from "./modal.js";
 
-export function montarAdmin(cont, registro, onChange) {
+export function montarAdmin(cont, registro, onChange, rol) {
+  // Un admin no es superadmin: no debe poder crear ni promover a superadmin (el server también
+  // lo rechaza). El superadmin sí ve la opción. Default conservador si no llega el rol.
+  const esSuper = rol === "superadmin";
   cont.innerHTML = `
     <div class="adm">
       <div class="adm-head">
@@ -79,7 +82,7 @@ export function montarAdmin(cont, registro, onChange) {
               <option value="supervisor">Supervisor</option>
               <option value="auditor">Auditor</option>
               <option value="admin">Admin</option>
-              <option value="superadmin">Superadmin</option>
+              ${esSuper ? '<option value="superadmin">Superadmin</option>' : ""}
             </select>
             <input id="u-lim" type="number" placeholder="límite IA" style="width:110px">
             <button id="u-add">Agregar usuario</button>
@@ -219,7 +222,9 @@ export function montarAdmin(cont, registro, onChange) {
   };
 
   const tbody = cont.querySelector("#adm-users");
-  const ROLES = [["agente", "Agente"], ["supervisor", "Supervisor"], ["auditor", "Auditor"], ["admin", "Admin"], ["superadmin", "Superadmin"]];
+  const ROLES_ALL = [["agente", "Agente"], ["supervisor", "Supervisor"], ["auditor", "Auditor"], ["admin", "Admin"], ["superadmin", "Superadmin"]];
+  // El admin no ve/ofrece el rol superadmin en el selector de edición (el server filtra el listado).
+  const ROLES = esSuper ? ROLES_ALL : ROLES_ALL.filter(([v]) => v !== "superadmin");
   const rolLabel = (r) => r === "funcional" ? "Agente" : (ROLES.find((x) => x[0] === r)?.[1] || r);
   const apiUsers = async (metodo, id, body) => {
     const url = "/api/admin/users" + (id ? "/" + id : "");
