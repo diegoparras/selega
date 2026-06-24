@@ -1,7 +1,7 @@
 // admin.js — Pantalla de administración: reglas por jurisdicción, capa LLM (gateada)
 // y gestión de usuarios (4 niveles + límites) persistida en Postgres vía /api/admin.
 import { cargarPack, guardarPackCustom, borrarPackCustom } from "./rules/loader.js";
-import { esc } from "./util.js";
+import { esc, eyeify } from "./util.js";
 import { montarConstructorCampos } from "./admin-campos.js";
 import { montarConstructorCruces } from "./admin-cruces.js";
 import { montarConstructorChecklist } from "./admin-checklist.js";
@@ -272,6 +272,7 @@ export function montarAdmin(cont, registro, onChange, rol) {
     } catch (e) { aviso("No se pudo crear", e.message); }
   };
   pintarUsers();
+  eyeify(cont);   // ojito en contraseña de alta de usuario y API key de IA
 
   cont.querySelector("#adm-volver").onclick = () => {
     cont.classList.add("hidden");

@@ -502,3 +502,12 @@ button.mini { padding: 3px 9px; font-size: 13px; line-height: 1.2; }
 .dz-foot { color: var(--muted); font-size: 12.5px; margin: 18px 0 0; }
 .pie { text-align: center; color: var(--muted); font-size: 12px; margin-top: 38px; line-height: 1.6; }
 .logo-link { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; color: inherit; cursor: pointer; }
+
+/* Ojito mostrar/ocultar contraseña (compartido en la suite) */
+.pass-wrap { position: relative; display: flex; align-items: center; }
+.pass-wrap > input { flex: 1 1 auto; padding-right: 36px; }
+.pass-toggle { position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+  width: 28px; height: 28px; display: grid; place-items: center; background: none; border: 0;
+  border-radius: 7px; color: var(--muted); cursor: pointer; transition: color .15s, background .15s; }
+.pass-toggle:hover { color: var(--text); background: var(--card-2); }
+.pass-toggle svg { width: 16px; height: 16px; }

@@ -7,7 +7,7 @@ import { extraer } from "./core/extraer-anclas.js";
 import { crucesAObservaciones, desenlace, ETIQUETA_DESENLACE } from "./core/decision.js";
 import { cargarRegistro, cargarPack } from "./rules/loader.js";
 import { montarAdmin } from "./admin.js";
-import { esc } from "./util.js";
+import { esc, eyeify } from "./util.js";
 import { me, login, logout } from "./session.js";
 import { PdfView } from "./pdf-view.js";
 import * as recon from "./recon/index.js";
@@ -864,3 +864,4 @@ async function init() {
   irAHome(); // landing por rol: supervisor/auditor → bandeja; agente/admin → inicio
 }
 init();
+eyeify(document);   // ojito en el campo de contraseña del login (estático)
