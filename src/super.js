@@ -14,7 +14,7 @@ const ROUTINGS = [
 ];
 
 export async function montarSuper(cont, registro, onChange) {
-  let cfg = { jurisdicciones: [], cap_vlm_local: false, ollama_url: "", ollama_model: "", ollama_keep: "demanda", ia_routing: "local-first", cap_ocr: true, data_collection_deny: true, cap_firma: false };
+  let cfg = { jurisdicciones: [], cap_vlm_local: false, ollama_url: "", ollama_model: "", ollama_keep: "demanda", ia_routing: "local-first", cap_ocr: true, data_collection_deny: true, cap_firma: false, cap_firma_ocsp: false };
   try { cfg = { ...cfg, ...(await (await fetch("/api/super/config")).json()) }; } catch { /* defaults */ }
   const jurSet = new Set(cfg.jurisdicciones || []);
 
@@ -94,12 +94,17 @@ export async function montarSuper(cont, registro, onChange) {
       <details class="bloque adm-bloque">
         <summary><span class="bq-tit">Firma electrónica</span><span class="bq-chip neutral" id="sup-chip-firma">—</span></summary>
         <div class="bq-body">
-          <p class="adm-hint">Verificación de firma digital de PDFs (PAdES) contra raíces de confianza. Apagada por defecto. El PDF se procesa local y NO se persiste. Al activarla aparece la verificación de firma en los expedientes.</p>
+          <p class="adm-hint">Verificación de firma digital (PDF/PAdES, XML/XAdES y CMS/CAdES) contra raíces de confianza. Apagada por defecto. El documento se procesa local y NO se persiste. Al activarla aparece la verificación de firma en los expedientes.</p>
           <div class="adm-grid">
             <label>Verificación de firma</label>
             <select id="sup-firma">
               <option value="off">Apagada</option>
               <option value="on">Activada</option>
+            </select>
+            <label>Revocación OCSP online</label>
+            <select id="sup-firma-ocsp">
+              <option value="off">Apagada (solo CRL, sin red)</option>
+              <option value="on">Activada (consulta al responder)</option>
             </select>
           </div>
           <p class="adm-hint" id="sup-firma-roots">—</p>
@@ -122,6 +127,16 @@ export async function montarSuper(cont, registro, onChange) {
       await aviso(on ? "Firma activada" : "Firma apagada", on ? "La verificación de firma queda disponible en los expedientes." : "La verificación de firma queda oculta.");
       refrescarMotores(false);
     } catch (err) { aviso("No se pudo guardar", err.message); e.target.value = cfg.cap_firma ? "on" : "off"; }
+  };
+  // OCSP online: única salida a la red de la verificación; apagada por defecto (offline-first).
+  cont.querySelector("#sup-firma-ocsp").value = cfg.cap_firma_ocsp ? "on" : "off";
+  cont.querySelector("#sup-firma-ocsp").onchange = async (e) => {
+    const on = e.target.value === "on";
+    try {
+      const r = await fetch("/api/super/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cap_firma_ocsp: on }) });
+      if (!r.ok) throw new Error(`Error ${r.status}`);
+      cfg.cap_firma_ocsp = on;
+    } catch (err) { aviso("No se pudo guardar", err.message); e.target.value = cfg.cap_firma_ocsp ? "on" : "off"; }
   };
 
   // ---- Sonda de motores (enabled ≠ available) ----

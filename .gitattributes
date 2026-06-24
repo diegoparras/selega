@@ -12,3 +12,7 @@
 *.pdf binary
 *.p12 binary
 *.pfx binary
+*.p7m binary
+*.p7s binary
+*.der binary
+*.crl binary

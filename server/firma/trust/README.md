@@ -2,7 +2,7 @@
 
 Soltá acá los certificados raíz (`.pem`/`.crt`/`.cer`) que la verificación de firma debe
 considerar **confiables**, y reiniciá Selega. Una firma cuya cadena llegue a alguna de estas
-raíces da 🟢; si es íntegra pero no llega a ninguna, da 🟡 observada.
+raíces da válida; si es íntegra pero no llega a ninguna, da observada.
 
 Qué cargar en producción:
 

@@ -5,7 +5,7 @@ import * as repo from "./db.js";
 import { config } from "./config.js";
 import { verifyPassword, signSession, verifySession } from "./auth.js";
 import { extraerDePDF } from "./extraer.js";
-import { verificarFirmaPdf, trustRootsInfo } from "./firma/index.js";
+import { verificarFirma, trustRootsInfo } from "./firma/index.js";
 import { createLockatus, pkce, randomId } from "./lockatus.js";
 
 // Cliente OIDC hacia Lockatus (solo modo federado; construcción perezosa, una vez).
@@ -17,7 +17,7 @@ const lk = () => (_lk ||= createLockatus(config.lockatus));
 const ROLES = ["agente", "supervisor", "auditor", "admin", "superadmin"];
 
 // Defaults de la capa de motores (se sobrescriben desde config por el superadmin).
-const CAP_DEFAULTS = { cap_ocr: "1", cap_vlm_local: "0", cap_firma: "0", ollama_url: "http://host.docker.internal:11434", ollama_model: "qwen2.5vl:3b", ia_routing: "local-first", ollama_keep: "demanda", data_collection_deny: config.dataCollectionDeny };
+const CAP_DEFAULTS = { cap_ocr: "1", cap_vlm_local: "0", cap_firma: "0", cap_firma_ocsp: "0", ollama_url: "http://host.docker.internal:11434", ollama_model: "qwen2.5vl:3b", ia_routing: "local-first", ollama_keep: "demanda", data_collection_deny: config.dataCollectionDeny };
 // keep_alive de Ollama: "siempre" = el modelo queda en RAM (rápido); "demanda" = carga al usarlo y se descarga tras 5 min.
 const keepAlive = (modo) => (modo === "siempre" ? -1 : "5m");
 
@@ -364,13 +364,14 @@ export async function handle(req, res, path) {
     if ((await cap("cap_firma")) !== "1")
       return json(res, 403, { error: "La verificación de firma está desactivada. Pedile al superadministrador que la habilite." });
     if (path === "/api/firma/verificar" && m === "POST") {
-      const pdf = await readRaw(req, 30e6); // mismo tope que extracción; el PDF no se persiste
+      const doc = await readRaw(req, 30e6); // mismo tope que extracción; el documento no se persiste
+      const ocspOnline = (await cap("cap_firma_ocsp")) === "1"; // revocación online, gateada aparte
       try {
-        const r = await verificarFirmaPdf(pdf);
-        await repo.auditar(user.email, null, "firma_verificada", `${r.global} · ${r.firmas.length} firma/s`);
+        const r = await verificarFirma(doc, { ocspOnline });
+        await repo.auditar(user.email, null, "firma_verificada", `${r.tipo || "?"} · ${r.global} · ${r.firmas.length} firma/s`);
         return json(res, 200, r);
       } catch (e) {
-        return json(res, 422, { error: "No se pudo verificar la firma: " + e.message });
+        return json(res, e.code === "formato" ? 415 : 422, { error: "No se pudo verificar la firma: " + e.message });
       }
     }
     if (path === "/api/firma/trust" && m === "GET") {
@@ -399,7 +400,7 @@ export async function handle(req, res, path) {
     if (path === "/api/super/config" && m === "GET") {
       return json(res, 200, {
         cap_ocr: (await cap("cap_ocr")) === "1", cap_vlm_local: (await cap("cap_vlm_local")) === "1",
-        cap_firma: (await cap("cap_firma")) === "1",
+        cap_firma: (await cap("cap_firma")) === "1", cap_firma_ocsp: (await cap("cap_firma_ocsp")) === "1",
         ollama_url: await cap("ollama_url"), ollama_model: await cap("ollama_model"), ollama_keep: await cap("ollama_keep"),
         ia_routing: await cap("ia_routing"), data_collection_deny: (await cap("data_collection_deny")) === "1",
         jurisdicciones: await jurisHabilitadas(),
@@ -410,6 +411,7 @@ export async function handle(req, res, path) {
       if (b.cap_ocr != null) await repo.setConfig("cap_ocr", b.cap_ocr ? "1" : "0");
       if (b.cap_vlm_local != null) await repo.setConfig("cap_vlm_local", b.cap_vlm_local ? "1" : "0");
       if (b.cap_firma != null) await repo.setConfig("cap_firma", b.cap_firma ? "1" : "0");
+      if (b.cap_firma_ocsp != null) await repo.setConfig("cap_firma_ocsp", b.cap_firma_ocsp ? "1" : "0");
       if (b.ollama_url) await repo.setConfig("ollama_url", String(b.ollama_url));
       if (b.ollama_model) await repo.setConfig("ollama_model", String(b.ollama_model));
       if (b.ollama_keep) await repo.setConfig("ollama_keep", String(b.ollama_keep));

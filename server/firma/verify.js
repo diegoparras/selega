@@ -2,7 +2,8 @@
 //
 // Por cada firma del PDF responde: integridad (¿se modificó tras firmar?), identidad
 // del firmante (nombre, CUIT, AC), cadena hasta una raíz de confianza, y un veredicto
-// con semáforo 🟢🟡🔴. Sin red: todo se resuelve con el documento y el trust store.
+// con semáforo (válida / observada / inválida). Sin red: todo se resuelve con el
+// documento y el trust store.
 //
 // Funciona igual en Node y en el browser (mismo pkijs). Acá el engine se cablea con la
 // WebCrypto de Node; en el browser, pkijs toma `globalThis.crypto` solo.
@@ -11,9 +12,10 @@ import { ContentInfo, SignedData, Certificate, CertificateRevocationList,
          CertificateChainValidationEngine, setEngine, CryptoEngine } from "pkijs";
 import { webcrypto } from "node:crypto";
 import { extraerFirmas, toAB } from "./pades.js";
+import { validarRespuestaOCSP, consultarOCSPOnline } from "./ocsp.js";
 
 let _engineListo = false;
-function initEngine() {
+export function initEngine() {
   if (_engineListo) return;
   const eng = new CryptoEngine({ name: "trustux", crypto: webcrypto });
   setEngine("trustux", eng, eng);
@@ -31,6 +33,11 @@ const DIGEST = {
   "2.16.840.1.101.3.4.2.3": "SHA-512",
 };
 const DIGEST_DEBIL = new Set(["MD5", "SHA-1"]);
+/** Nombre del algoritmo de digest de un SignerInfo y si es inseguro (compartido PAdES/CAdES). */
+export function algoritmoDe(si) {
+  const nombre = DIGEST[si?.digestAlgorithm?.algorithmId] || si?.digestAlgorithm?.algorithmId || "?";
+  return { nombre, debil: DIGEST_DEBIL.has(nombre) };
+}
 const OID_SIGNING_TIME = "1.2.840.113549.1.9.5";
 const OID_TIMESTAMP = "1.2.840.113549.1.9.16.2.14"; // RFC 3161 signature-time-stamp (unsigned attr)
 
@@ -59,10 +66,34 @@ export function cargarCRL(pemOrDer) {
   return CertificateRevocationList.fromBER(toAB(Buffer.from(der)));
 }
 
+/** Identidad del firmante a partir del certificado (compartida por los motores PAdES y XAdES). */
+export function identidadDe(cert) {
+  const get = (oid) => {
+    const tv = cert.subject.typesAndValues.find((t) => t.type === oid);
+    return tv ? tv.value.valueBlock.value : null;
+  };
+  return {
+    nombre: get(OID.CN),
+    cuit: (get(OID.SERIAL) || "").replace(/^CUIT\s*/i, "") || null,
+    rol: get(OID.OU),
+    organizacion: get(OID.O),
+  };
+}
+
+/** Valida una cadena de certificados hasta una raíz de confianza (compartida PAdES/XAdES). */
+export async function validarCadena(certs, trustRoots = []) {
+  initEngine();
+  if (!certs.length || !trustRoots.length) return { ok: false, confiable: false, raiz: null };
+  const engine = new CertificateChainValidationEngine({ certs, trustedCerts: trustRoots });
+  const res = await engine.verify();
+  const confiable = !!res.result;
+  return { ok: confiable, confiable, raiz: confiable ? nombreRaiz(res) : null };
+}
+
 // Revocación OFFLINE: ¿el serial del firmante figura en alguna CRL de su emisor?
 // Mira las CRL embebidas en la firma (PAdES-LT valida sin red) y las provistas por el
 // trust store. No sale a la red: si no hay CRL del emisor, queda "no-verificada".
-function chequearRevocacion(cert, sd, crlsProvistas) {
+export function chequearRevocacion(cert, sd, crlsProvistas) {
   const embebidas = (sd.crls || []).filter((c) => c instanceof CertificateRevocationList);
   const todas = [...embebidas, ...crlsProvistas];
   if (!todas.length) return { metodo: "no-verificada", revocado: false };
@@ -91,7 +122,7 @@ const attr = (cert, oid) => {
 };
 
 /** Encuentra el certificado del firmante (el referenciado por el SignerInfo). */
-function certDelFirmante(sd) {
+export function certDelFirmante(sd) {
   const si = sd.signerInfos[0];
   const certs = (sd.certificates || []).filter((c) => c instanceof Certificate);
   // SID por issuer+serial: casamos por número de serie.
@@ -111,7 +142,7 @@ function certDelFirmante(sd) {
  * @param {{trustRoots?: Certificate[]}} opts
  * @returns {Promise<{firmas: object[], global: string}>}
  */
-export async function verificar(pdf, { trustRoots = [], crls = [] } = {}) {
+export async function verificar(pdf, { trustRoots = [], crls = [], ocsps = [], ocspOnline = false } = {}) {
   initEngine();
   const firmas = [];
 
@@ -162,6 +193,31 @@ export async function verificar(pdf, { trustRoots = [], crls = [] } = {}) {
       v.revocacion = cert ? chequearRevocacion(cert, sd, crls) : { metodo: "no-verificada", revocado: false };
       if (v.revocacion.revocado) {
         v.observaciones.push(`Certificado revocado${v.revocacion.fecha ? " el " + v.revocacion.fecha.slice(0, 10) : ""}.`);
+      }
+      // 2c) OCSP: respuestas provistas/embebidas (offline) refinan la revocación; precede a la CRL.
+      // La consulta online (ocspOnline) es OPT-IN — la única salida a la red del motor.
+      if (cert && (ocsps.length || ocspOnline)) {
+        const certs = (sd.certificates || []).filter((c) => c instanceof Certificate);
+        const issuer = certs.find((c) => c.subject.toString() === cert.issuer.toString())
+          || trustRoots.find((c) => c.subject.toString() === cert.issuer.toString());
+        if (issuer) {
+          let resuelto = false;
+          for (const der of ocsps) {
+            const o = await validarRespuestaOCSP(cert, issuer, der);
+            if (o.aplicable) {
+              v.revocacion = { metodo: "ocsp", revocado: o.revocado };
+              if (o.revocado) v.observaciones.push("Certificado revocado (OCSP).");
+              resuelto = true; break;
+            }
+          }
+          if (!resuelto && ocspOnline) {
+            const o = await consultarOCSPOnline(cert, issuer);
+            if (o.aplicable) {
+              v.revocacion = { metodo: "ocsp-online", revocado: o.revocado };
+              if (o.revocado) v.observaciones.push("Certificado revocado (OCSP online).");
+            }
+          }
+        }
       }
 
       // 3) Cadena hasta una raíz de confianza.
