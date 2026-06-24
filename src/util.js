@@ -37,3 +37,45 @@ export function eyeify(root) {
     w.appendChild(b);
   });
 }
+
+// ---- Resaltado de sintaxis JSON en un <textarea> (overlay, sin dependencias) ----
+function _jHLesc(x) { return x.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+export function jsonHL(s) {
+  return _jHLesc(s).replace(
+    /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false)\b|\b(null)\b/g,
+    (m, str, colon, num, bool, nul) => {
+      if (str !== undefined) return colon ? `<span class="jk">${str}</span>${colon}` : `<span class="js">${str}</span>`;
+      if (num !== undefined) return `<span class="jn">${num}</span>`;
+      if (bool !== undefined) return `<span class="jb">${bool}</span>`;
+      if (nul !== undefined) return `<span class="ju">${nul}</span>`;
+      return m;
+    });
+}
+// Envuelve el textarea con un <pre> coloreado detrás (texto del textarea transparente). Copia
+// métricas computadas para alinear. Idempotente. Sólo para textareas NO tabbed (acá no rompe layout).
+export function jsonHi(ta) {
+  if (!ta || ta.dataset.jhl) return; ta.dataset.jhl = "1";
+  const cs = getComputedStyle(ta);
+  const wrap = document.createElement("div");
+  wrap.style.position = "relative";
+  wrap.style.display = cs.display === "inline" ? "inline-block" : cs.display;
+  ta.parentNode.insertBefore(wrap, ta); wrap.appendChild(ta);
+  const pre = document.createElement("pre");
+  pre.className = "jhl"; pre.setAttribute("aria-hidden", "true");
+  ["fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "whiteSpace",
+    "wordBreak", "tabSize", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
+    "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth", "borderStyle", "boxSizing"
+  ].forEach(p => { pre.style[p] = cs[p]; });
+  pre.style.position = "absolute"; pre.style.inset = "0"; pre.style.margin = "0";
+  pre.style.borderColor = "transparent"; pre.style.overflow = "hidden"; pre.style.pointerEvents = "none";
+  pre.style.whiteSpace = "pre-wrap"; pre.style.overflowWrap = "break-word"; pre.style.background = "transparent";
+  pre.style.color = cs.color;
+  wrap.insertBefore(pre, ta);
+  ta.style.position = "relative"; ta.style.background = "transparent"; ta.style.color = "transparent";
+  ta.style.webkitTextFillColor = "transparent"; ta.style.caretColor = cs.color;
+  const upd = () => { pre.innerHTML = jsonHL(ta.value) + "\n"; };
+  const sync = () => { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; };
+  ta.addEventListener("input", () => { upd(); sync(); });
+  ta.addEventListener("scroll", sync);
+  upd();
+}

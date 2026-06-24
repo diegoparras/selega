@@ -511,3 +511,9 @@ button.mini { padding: 3px 9px; font-size: 13px; line-height: 1.2; }
   border-radius: 7px; color: var(--muted); cursor: pointer; transition: color .15s, background .15s; }
 .pass-toggle:hover { color: var(--text); background: var(--card-2); }
 .pass-toggle svg { width: 16px; height: 16px; }
+
+/* Resaltado de sintaxis JSON (overlay): el <pre>.jhl recibe sus métricas por JS; acá solo colores */
+.jhl .jk { color: var(--accent); }
+.jhl .js { color: #2e9e5b; }
+.jhl .jn { color: #c2792b; }
+.jhl .jb, .jhl .ju { color: #9a5cd0; }

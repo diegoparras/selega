@@ -1,7 +1,7 @@
 // admin.js — Pantalla de administración: reglas por jurisdicción, capa LLM (gateada)
 // y gestión de usuarios (4 niveles + límites) persistida en Postgres vía /api/admin.
 import { cargarPack, guardarPackCustom, borrarPackCustom } from "./rules/loader.js";
-import { esc, eyeify } from "./util.js";
+import { esc, eyeify, jsonHi } from "./util.js";
 import { montarConstructorCampos } from "./admin-campos.js";
 import { montarConstructorCruces } from "./admin-cruces.js";
 import { montarConstructorChecklist } from "./admin-checklist.js";
@@ -117,6 +117,7 @@ export function montarAdmin(cont, registro, onChange, rol) {
     const jur = registro.find((j) => j.id === jurSel.value);
     const pack = await cargarPack(jur);
     ta.value = JSON.stringify(pack, null, 2);
+    ta.dispatchEvent(new Event("input"));   // refrescar el resaltado JSON (cambio programático)
     const custom = pack._origen === "custom";
     chipReglas.textContent = custom ? "custom" : "original";
     chipReglas.className = "bq-chip " + (custom ? "warn" : "neutral");
@@ -273,6 +274,7 @@ export function montarAdmin(cont, registro, onChange, rol) {
   };
   pintarUsers();
   eyeify(cont);   // ojito en contraseña de alta de usuario y API key de IA
+  jsonHi(cont.querySelector("#adm-json"));   // resaltado de sintaxis en el editor de packs
 
   cont.querySelector("#adm-volver").onclick = () => {
     cont.classList.add("hidden");
