@@ -9,3 +9,6 @@
 *.ico binary
 *.traineddata binary
 *.gz binary
+*.pdf binary
+*.p12 binary
+*.pfx binary

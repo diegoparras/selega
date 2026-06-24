@@ -5,13 +5,14 @@ import * as repo from "./db.js";
 import { config } from "./config.js";
 import { verifyPassword, signSession, verifySession } from "./auth.js";
 import { extraerDePDF } from "./extraer.js";
+import { verificarFirmaPdf, trustRootsInfo } from "./firma/index.js";
 
 // Niveles de usuario. 'funcional' queda como alias histórico de 'agente'.
 // superadmin = comisiona el sistema (motores/jurisdicciones/infra); por encima de admin.
 const ROLES = ["agente", "supervisor", "auditor", "admin", "superadmin"];
 
 // Defaults de la capa de motores (se sobrescriben desde config por el superadmin).
-const CAP_DEFAULTS = { cap_ocr: "1", cap_vlm_local: "0", ollama_url: "http://host.docker.internal:11434", ollama_model: "qwen2.5vl:3b", ia_routing: "local-first", ollama_keep: "demanda", data_collection_deny: config.dataCollectionDeny };
+const CAP_DEFAULTS = { cap_ocr: "1", cap_vlm_local: "0", cap_firma: "0", ollama_url: "http://host.docker.internal:11434", ollama_model: "qwen2.5vl:3b", ia_routing: "local-first", ollama_keep: "demanda", data_collection_deny: config.dataCollectionDeny };
 // keep_alive de Ollama: "siempre" = el modelo queda en RAM (rápido); "demanda" = carga al usarlo y se descarga tras 5 min.
 const keepAlive = (modo) => (modo === "siempre" ? -1 : "5m");
 
@@ -127,7 +128,8 @@ export async function handle(req, res, path) {
     return json(res, 200, { email: u.email, role: u.role, limite: u.limite, usados: u.usados,
       requiere_revision: (await repo.getConfig("requiere_revision", "0")) === "1",
       jurisdicciones: await jurisHabilitadas(),   // [] = todas (el superadmin scopea el install)
-      ia_disponible: cloudOn || localOn });
+      ia_disponible: cloudOn || localOn,
+      firma_disponible: (await cap("cap_firma")) === "1" });   // verificación de firma (gateada por superadmin)
   }
 
   // ---- extracción de PDF (local, no sale del contenedor; no requiere sesión) ----
@@ -302,6 +304,28 @@ export async function handle(req, res, path) {
     return json(res, 502, { error: "La IA no respondió: " + (lastErr?.message || "error") });
   }
 
+  // ---- verificación de firma digital (Trustux). Capacidad OPCIONAL, gateada por el superadmin. ----
+  // El gate es server-side (no alcanza con ocultar la pestaña en el cliente): si cap_firma está
+  // apagado, /api/firma/* responde 403 y Selega funciona exactamente como sin firma.
+  if (seg[1] === "firma") {
+    if ((await cap("cap_firma")) !== "1")
+      return json(res, 403, { error: "La verificación de firma está desactivada. Pedile al superadministrador que la habilite." });
+    if (path === "/api/firma/verificar" && m === "POST") {
+      const pdf = await readRaw(req, 30e6); // mismo tope que extracción; el PDF no se persiste
+      try {
+        const r = await verificarFirmaPdf(pdf);
+        await repo.auditar(user.email, null, "firma_verificada", `${r.global} · ${r.firmas.length} firma/s`);
+        return json(res, 200, r);
+      } catch (e) {
+        return json(res, 422, { error: "No se pudo verificar la firma: " + e.message });
+      }
+    }
+    if (path === "/api/firma/trust" && m === "GET") {
+      return json(res, 200, { roots: trustRootsInfo() });
+    }
+    return json(res, 404, { error: "ruta de firma no encontrada" });
+  }
+
   // ---- superadmin: comisiona el sistema (motores + jurisdicciones + infra) ----
   if (seg[1] === "super") {
     if (!esSuperadmin) return json(res, 403, { error: "solo superadmin" });
@@ -315,12 +339,14 @@ export async function handle(req, res, path) {
         local: { enabled: (await cap("cap_vlm_local")) === "1", available: probe.up, url,
           model: await cap("ollama_model"), modelos: probe.modelos, error: probe.error || null },
         nube: { enabled: (await repo.getConfig("llm_enabled", "0")) === "1", available: cloudKey, key_set: cloudKey },
+        firma: { enabled: (await cap("cap_firma")) === "1", available: true, roots: trustRootsInfo().length },
         routing: await cap("ia_routing"),
       });
     }
     if (path === "/api/super/config" && m === "GET") {
       return json(res, 200, {
         cap_ocr: (await cap("cap_ocr")) === "1", cap_vlm_local: (await cap("cap_vlm_local")) === "1",
+        cap_firma: (await cap("cap_firma")) === "1",
         ollama_url: await cap("ollama_url"), ollama_model: await cap("ollama_model"), ollama_keep: await cap("ollama_keep"),
         ia_routing: await cap("ia_routing"), data_collection_deny: (await cap("data_collection_deny")) === "1",
         jurisdicciones: await jurisHabilitadas(),
@@ -330,6 +356,7 @@ export async function handle(req, res, path) {
       const b = await readBody(req);
       if (b.cap_ocr != null) await repo.setConfig("cap_ocr", b.cap_ocr ? "1" : "0");
       if (b.cap_vlm_local != null) await repo.setConfig("cap_vlm_local", b.cap_vlm_local ? "1" : "0");
+      if (b.cap_firma != null) await repo.setConfig("cap_firma", b.cap_firma ? "1" : "0");
       if (b.ollama_url) await repo.setConfig("ollama_url", String(b.ollama_url));
       if (b.ollama_model) await repo.setConfig("ollama_model", String(b.ollama_model));
       if (b.ollama_keep) await repo.setConfig("ollama_keep", String(b.ollama_keep));

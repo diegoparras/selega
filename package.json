@@ -7,10 +7,13 @@
   "scripts": {
     "start": "node server/index.js",
     "serve": "node server/index.js",
-    "test": "node test/test-core.mjs && node test/test-motor.mjs"
+    "test": "node test/test-core.mjs && node test/test-motor.mjs && node test/test-firma.mjs"
   },
   "dependencies": {
+    "asn1js": "^3.0.10",
     "pdf-parse": "^2.4.5",
-    "pg": "^8.22.0"
+    "pg": "^8.22.0",
+    "pkijs": "^3.4.0",
+    "pvutils": "^1.1.5"
   }
 }
