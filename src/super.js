@@ -14,7 +14,7 @@ const ROUTINGS = [
 ];
 
 export async function montarSuper(cont, registro, onChange) {
-  let cfg = { jurisdicciones: [], cap_vlm_local: false, ollama_url: "", ollama_model: "", ollama_keep: "demanda", ia_routing: "local-first", cap_ocr: true, data_collection_deny: true };
+  let cfg = { jurisdicciones: [], cap_vlm_local: false, ollama_url: "", ollama_model: "", ollama_keep: "demanda", ia_routing: "local-first", cap_ocr: true, data_collection_deny: true, cap_firma: false };
   try { cfg = { ...cfg, ...(await (await fetch("/api/super/config")).json()) }; } catch { /* defaults */ }
   const jurSet = new Set(cfg.jurisdicciones || []);
 
@@ -90,12 +90,39 @@ export async function montarSuper(cont, registro, onChange) {
           <div class="adm-acciones"><button id="sup-save">Guardar motores</button></div>
         </div>
       </details>
+
+      <details class="bloque adm-bloque">
+        <summary><span class="bq-tit">Firma electrónica</span><span class="bq-chip neutral" id="sup-chip-firma">—</span></summary>
+        <div class="bq-body">
+          <p class="adm-hint">Verificación de firma digital de PDFs (PAdES) contra raíces de confianza. Apagada por defecto. El PDF se procesa local y NO se persiste. Al activarla aparece la verificación de firma en los expedientes.</p>
+          <div class="adm-grid">
+            <label>Verificación de firma</label>
+            <select id="sup-firma">
+              <option value="off">Apagada</option>
+              <option value="on">Activada</option>
+            </select>
+          </div>
+          <p class="adm-hint" id="sup-firma-roots">—</p>
+        </div>
+      </details>
     </div>`;
 
   cont.querySelector("#sup-volver").onclick = () => onChange?.("volver");
   // Estado del tanque: off / demanda / siempre (combina el toggle y el modo de carga).
   cont.querySelector("#sup-local-estado").value = cfg.cap_vlm_local ? (cfg.ollama_keep || "demanda") : "off";
   cont.querySelector("#sup-datacol").value = cfg.data_collection_deny ? "deny" : "allow";
+  // Firma electrónica: toggle con guardado inmediato (cap_firma, gateado server-side).
+  cont.querySelector("#sup-firma").value = cfg.cap_firma ? "on" : "off";
+  cont.querySelector("#sup-firma").onchange = async (e) => {
+    const on = e.target.value === "on";
+    try {
+      const r = await fetch("/api/super/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cap_firma: on }) });
+      if (!r.ok) throw new Error(`Error ${r.status}`);
+      cfg.cap_firma = on;
+      await aviso(on ? "Firma activada" : "Firma apagada", on ? "La verificación de firma queda disponible en los expedientes." : "La verificación de firma queda oculta.");
+      refrescarMotores(false);
+    } catch (err) { aviso("No se pudo guardar", err.message); e.target.value = cfg.cap_firma ? "on" : "off"; }
+  };
 
   // ---- Sonda de motores (enabled ≠ available) ----
   const badge = (el, ok, txt) => { el.className = "sup-badge " + (ok ? "ok" : "bad"); el.textContent = txt; };
@@ -108,6 +135,13 @@ export async function montarSuper(cont, registro, onChange) {
       badge(nb, m.nube.available, m.nube.enabled ? (m.nube.available ? "activa" : "sin key") : "apagada");
       cont.querySelector("#sup-chip-mot").textContent =
         [m.local.enabled && m.local.available && "local", m.nube.enabled && m.nube.available && "nube"].filter(Boolean).join(" + ") || "solo OCR";
+      // estado de la firma electrónica
+      if (m.firma) {
+        const fch = cont.querySelector("#sup-chip-firma");
+        if (fch) { fch.textContent = m.firma.enabled ? "activada" : "apagada"; fch.className = "bq-chip " + (m.firma.enabled ? "ok" : "neutral"); }
+        const fr = cont.querySelector("#sup-firma-roots");
+        if (fr) fr.textContent = m.firma.roots != null ? `${m.firma.roots} raíz(es) de confianza cargada(s).` : "";
+      }
       // poblar modelos disponibles en Ollama
       const sel = cont.querySelector("#sup-ollama-model");
       if (forzarModelos && m.local.modelos.length) {
