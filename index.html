@@ -7,7 +7,7 @@
   <meta name="selega-version" content="__SELEGA_VERSION__" />
   <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
   <script>if (localStorage.getItem("selega.theme") === "dark") document.documentElement.dataset.theme = "dark";</script>
-  <link rel="stylesheet" href="./styles/app.css?v=38" />
+  <link rel="stylesheet" href="./styles/app.css?v=39" />
 </head>
 <body class="booting">
   <div id="login" class="login-overlay hidden">
@@ -34,6 +34,7 @@
       </button>
       <div id="hdr-menu" class="menu menu-right hidden">
         <div class="menu-user" id="user-info"></div>
+        <label class="menu-jur" id="ver-como-wrap" style="display:none"><span class="menu-jur-lbl">Ver como</span><select id="ver-como"></select></label>
         <div class="menu-sep"></div>
         <label class="menu-jur"><span class="menu-jur-lbl">Jurisdicción</span><select id="jurisdiccion"></select></label>
         <div class="menu-sep"></div>
@@ -190,6 +191,13 @@
       <details class="bloque" id="bq-controles">
         <summary><span class="bq-grip" aria-hidden="true"></span><span class="bq-tit">Controles formales</span><span class="bq-chip neutral" id="chip-controles"></span></summary>
         <div class="bq-body" id="checklist"></div>
+      </details>
+      <details class="bloque" id="bq-firma" hidden>
+        <summary><span class="bq-grip" aria-hidden="true"></span><span class="bq-tit">Firma digital</span><span class="bq-chip neutral" id="chip-firma"></span></summary>
+        <div class="bq-body">
+          <button id="btn-verificar-firma" class="ghost">Verificar firma del PDF</button>
+          <div id="firma-result" class="firma-result"></div>
+        </div>
       </details>
     </aside>
     </div>

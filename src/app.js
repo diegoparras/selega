@@ -17,6 +17,7 @@ import { aviso, confirmar, pedir } from "./modal.js";
 import { SEMAFORO, ORDEN_SEM, ESTADO_LABEL } from "./core/veredicto.js";
 import { montarExpediente } from "./expediente.js";
 import { montarSuper } from "./super.js";
+import { initFirma } from "./firma.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 let formato = cargarFormato();                       // miles / decimal / negativos (configurable)
@@ -28,14 +29,22 @@ const vaciar = () => Object.fromEntries(defs.map((c) => [c.id, null]));
 let cifras = vaciar();
 let pack = null;
 let pv = null;                // lienzo PDF (pdf.js)
+let pdfBytes = null;          // bytes del PDF actual (para verificar su firma, si está habilitada)
 let campoObjetivo = null;     // cifra-destino del OCR de región (la que el humano tocó)
 const observChecklist = {}; // id control -> consecuencia activa (si "observado")
 let checklistEstado = {};   // id control -> valor del select ("ok"|"obs"|"na"|"") para guardar/restaurar
 let registroGlobal = [];    // registro de jurisdicciones (para reabrir trabajos)
 let ultimoDesenlace = "legaliza"; // código del último desenlace computado (para guardar + bandeja)
-let rolActual = "agente";   // rol del usuario logueado (agente/supervisor/auditor/admin)
-const verTodo = () => ["supervisor", "auditor", "admin"].includes(rolActual); // bandeja global
-const soloLectura = () => rolActual === "auditor";                            // auditor no escribe
+let rolActual = "agente";   // rol REAL del usuario (identidad / permiso server-side)
+// rol de VISTA: por defecto = rolActual. admin/superadmin pueden BAJARLO con "ver como [rol]"
+// para ver exactamente lo que ve un rol inferior, sin cambiar su rol real. Toda la lógica de
+// VISTA (qué bandeja, qué se puede tocar, dónde abre un trabajo) usa vistaRol; los permisos del
+// server siguen atados al rol real. Herencia estricta: super/admin son superconjunto.
+let vistaRol = "agente";
+const RANK = { agente: 0, funcional: 0, supervisor: 1, auditor: 1, admin: 2, superadmin: 3 };
+const verTodo = () => ["supervisor", "auditor", "admin", "superadmin"].includes(vistaRol); // bandeja global
+const soloLectura = () => vistaRol === "auditor";                            // auditor no escribe
+const puedeEditarVista = () => ["agente", "admin", "superadmin"].includes(vistaRol); // edita el control
 
 // SEMAFORO/ORDEN_SEM viven en core/veredicto.js (única fuente, compartida con el Expediente).
 let requiereRevision = false; // flag del Consejo (Admin): ¿los controles pasan por el supervisor?
@@ -66,8 +75,8 @@ function mostrarInicio() { ocultarVistas(); $("#vista-inicio").classList.remove(
 function mostrarControl() { ocultarVistas(); $("#vista-control").classList.remove("hidden"); }
 function mostrarBandeja() { ocultarVistas(); $("#vista-bandeja").classList.remove("hidden"); pintarBandeja($("#bandeja-lista"), $("#bandeja-titulo"), $("#bandeja-sub")); }
 function mostrarExpediente() { ocultarVistas(); $("#vista-expediente").classList.remove("hidden"); }
-// La "casa" depende del rol: supervisor/auditor viven en la bandeja; agente/admin en el inicio.
-function irAHome() { ["supervisor", "auditor"].includes(rolActual) ? mostrarBandeja() : mostrarInicio(); }
+// La "casa" depende de la VISTA: supervisor/auditor viven en la bandeja; agente/admin/super en inicio.
+function irAHome() { ["supervisor", "auditor"].includes(vistaRol) ? mostrarBandeja() : mostrarInicio(); }
 
 // ---- Bloques del rail: chips de estado + auto-abrir lo que falla ----
 function setChip(sel, clase, txt) { const e = $(sel); if (!e) return; e.className = "bq-chip " + clase; e.textContent = txt; }
@@ -502,12 +511,17 @@ async function abrirTrabajo(id) {
   } catch (e) { aviso("No se pudo abrir", "No se pudo abrir el trabajo: " + e.message); }
 }
 
-// Al abrir un trabajo desde la bandeja: el agente/admin van al CONTROL (editar);
-// el supervisor va al EXPEDIENTE con acciones; el auditor al EXPEDIENTE read-only.
+// Al abrir un trabajo desde la bandeja (según la VISTA):
+//  · agente → CONTROL (editar)
+//  · supervisor → EXPEDIENTE con acciones (aprobar/devolver/firmar)
+//  · auditor → EXPEDIENTE solo lectura
+//  · admin/superadmin → EXPEDIENTE con acciones Y botón "Editar" (heredan supervisor + agente).
 function abrirSegunRol(id) {
-  if (rolActual === "supervisor") return abrirExpediente(id, { acciones: true });
-  if (rolActual === "auditor") return abrirExpediente(id, { acciones: false });
-  return abrirTrabajo(id); // agente / admin → control (sin cambios)
+  const esRevisor = ["supervisor", "admin", "superadmin"].includes(vistaRol);
+  const editaTambien = ["admin", "superadmin"].includes(vistaRol);
+  if (esRevisor) return abrirExpediente(id, { acciones: true, onEditar: editaTambien ? () => abrirTrabajo(id) : null });
+  if (vistaRol === "auditor") return abrirExpediente(id, { acciones: false });
+  return abrirTrabajo(id); // agente → control directo
 }
 async function abrirExpediente(id, opts) {
   try {
@@ -518,6 +532,7 @@ async function abrirExpediente(id, opts) {
       registro: registroGlobal,
       onVolver: () => mostrarBandeja(),
       onRevisar: opts.acciones ? (accion, nota) => revisar(id, accion, nota) : null,
+      onEditar: opts.onEditar || null,   // admin/super: editar el control desde el expediente
     });
   } catch (e) { aviso("No se pudo abrir", "No se pudo abrir el expediente: " + e.message); }
 }
@@ -568,19 +583,43 @@ async function init() {
   const ROL_LABEL = { agente: "Agente", funcional: "Agente", supervisor: "Supervisor", auditor: "Auditor", admin: "Admin", superadmin: "Superadmin" };
   const rol = usuario.role === "funcional" ? "agente" : usuario.role;
   rolActual = rol;
+  vistaRol = rol;   // por defecto se ve con el rol real; admin/super lo pueden bajar ("ver como")
   requiereRevision = !!usuario.requiere_revision; // flag del Consejo (Admin)
   jurisHabilitadas = Array.isArray(usuario.jurisdicciones) ? usuario.jurisdicciones : []; // [] = todas (superadmin scopea)
-  document.body.dataset.rol = rol;
+  // Firma digital (Trustux): solo si el superadmin la habilitó (cap_firma). Muestra el bloque y cablea el panel.
+  if (usuario.firma_disponible) {
+    const bf = $("#bq-firma"); if (bf) bf.hidden = false;
+    initFirma({ getBytes: () => pdfBytes });
+  }
   $("#user-info").style.display = "";
-  $("#user-info").textContent = `${usuario.email} · ${ROL_LABEL[usuario.role] || usuario.role}${rol === "auditor" ? " (solo lectura)" : ""}`;
   $("#btn-logout").style.display = "";
   $("#btn-logout").onclick = async () => { await logout(); location.reload(); };
-  // Admin (config funcional): lo ven admin y superadmin. Sistema/Motores: SOLO superadmin.
-  const esAdminOMas = rol === "admin" || rol === "superadmin";
-  if (!esAdminOMas) $("#btn-admin").style.display = "none";
-  if (rol !== "superadmin") $("#btn-super").style.display = "none";
-  // Auditor = solo lectura: el CSS (body[data-rol=auditor]) oculta las acciones de escritura;
-  // el rol ya se ve en el menú (user-info). El header queda limpio (logo + ⋮).
+
+  // ---- Vista efectiva (A: herencia estricta · B: "ver como [rol]") ----
+  // Reaplica la UI que depende del rol según vistaRol. Los permisos REALES siguen atados a
+  // rolActual (server-side); esto es solo la VISTA (qué bandeja, qué se puede tocar, paneles).
+  function aplicarVistaRol() {
+    document.body.dataset.rol = vistaRol;   // el CSS de auditor (solo lectura) aplica por vista
+    const imp = vistaRol !== rolActual;
+    $("#user-info").textContent = `${usuario.email} · ${ROL_LABEL[rolActual] || rolActual}`
+      + (imp ? ` · viendo como ${ROL_LABEL[vistaRol]}` : (vistaRol === "auditor" ? " (solo lectura)" : ""));
+    // Paneles de config: con el rol REAL, pero ocultos mientras se "ve como" un inferior.
+    const verAdmin = ["admin", "superadmin"].includes(rolActual) && ["admin", "superadmin"].includes(vistaRol);
+    $("#btn-admin").style.display = verAdmin ? "" : "none";
+    $("#btn-super").style.display = (rolActual === "superadmin" && vistaRol === "superadmin") ? "" : "none";
+  }
+  // Selector "ver como" (solo admin/superadmin): su rol + los inferiores, para ver lo que ven.
+  const verComoWrap = $("#ver-como-wrap"), verComoSel = $("#ver-como");
+  if (["admin", "superadmin"].includes(rol) && verComoSel) {
+    const opciones = rol === "superadmin"
+      ? ["superadmin", "admin", "supervisor", "auditor", "agente"]
+      : ["admin", "supervisor", "auditor", "agente"];
+    verComoSel.innerHTML = opciones.map((r, i) => `<option value="${r}">${i === 0 ? "Mi rol — " : ""}${ROL_LABEL[r]}</option>`).join("");
+    verComoSel.value = vistaRol;
+    verComoSel.onchange = () => { vistaRol = verComoSel.value; aplicarVistaRol(); irAHome(); };
+    if (verComoWrap) verComoWrap.style.display = "";
+  } else if (verComoWrap) { verComoWrap.style.display = "none"; }
+  aplicarVistaRol();
 
   montarCifras();
   const registro = await cargarRegistro();
@@ -777,6 +816,9 @@ async function init() {
     btn.textContent = "⏳ Leyendo…"; btn.disabled = true;
     try {
       const buf = await file.arrayBuffer();
+      pdfBytes = buf;                                // lo guardamos para verificar su firma (panel Firma digital)
+      $("#chip-firma")?.classList.add("neutral");    // reset del semáforo de firma al cargar otro PDF
+      const fr = $("#firma-result"); if (fr) fr.innerHTML = "";
       // 1) El humano ve el PDF (lienzo client-side; el archivo no sale del navegador).
       mostrarControl();
       document.body.classList.add("con-pdf");

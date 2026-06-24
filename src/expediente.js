@@ -95,9 +95,10 @@ export async function montarExpediente(cont, t, opts = {}) {
         <div id="exp-audit"><p class="exp-vacio">Cargando…</p></div>
       </div>
 
-      ${opts.acciones ? `<div class="exp-acciones" id="exp-acciones">
-        <button id="exp-aprobar">Aprobar / Firmar</button>
-        <button id="exp-devolver" class="ghost">Devolver al agente</button>
+      ${(opts.acciones || opts.onEditar) ? `<div class="exp-acciones" id="exp-acciones">
+        ${opts.acciones ? `<button id="exp-aprobar">Aprobar / Firmar</button>
+        <button id="exp-devolver" class="ghost">Devolver al agente</button>` : ""}
+        ${opts.onEditar ? `<button id="exp-editar" class="ghost">Editar en control</button>` : ""}
       </div>` : ""}
     </div>`;
 
@@ -113,6 +114,11 @@ export async function montarExpediente(cont, t, opts = {}) {
       if (nota === null) return;            // canceló
       opts.onRevisar("devolver", nota);
     };
+  }
+  // Admin/superadmin: editar el control desde el expediente (heredan al agente).
+  if (opts.onEditar) {
+    const be = cont.querySelector("#exp-editar");
+    if (be) be.onclick = () => opts.onEditar();
   }
 
   // Traza de auditoría (append-only): quién, cuándo, qué.
