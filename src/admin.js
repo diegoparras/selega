@@ -5,7 +5,13 @@ import { esc, eyeify, jsonHi } from "./util.js";
 import { montarConstructorCampos } from "./admin-campos.js";
 import { montarConstructorCruces } from "./admin-cruces.js";
 import { montarConstructorChecklist } from "./admin-checklist.js";
-import { aviso, confirmar } from "./modal.js";
+import { aviso, confirmar, pedir } from "./modal.js";
+
+// Contraseña fuerte al azar (sin caracteres ambiguos), para "generar nueva contraseña".
+const genPass = () => {
+  const a = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*";
+  return Array.from(crypto.getRandomValues(new Uint32Array(18)), (n) => a[n % a.length]).join("");
+};
 
 export function montarAdmin(cont, registro, onChange, rol) {
   // Un admin no es superadmin: no debe poder crear ni promover a superadmin (el server también
@@ -244,7 +250,7 @@ export function montarAdmin(cont, registro, onChange, rol) {
         <td><select class="u-role-edit" data-id="${u.id}">${opts}</select></td>
         <td><input class="u-lim-edit" data-id="${u.id}" type="number" value="${u.limite || 0}" style="width:80px"></td>
         <td>${u.usados || 0}</td>
-        <td><a class="link u-del" data-id="${u.id}">borrar</a></td></tr>`;
+        <td><a class="link u-pass" data-id="${u.id}">clave</a> · <a class="link u-del" data-id="${u.id}">borrar</a></td></tr>`;
     }).join("") || `<tr><td colspan="5" style="color:var(--muted)">Sin usuarios cargados.</td></tr>`;
     const chipU = cont.querySelector("#adm-chip-users");
     chipU.textContent = us.length || "0"; chipU.className = "bq-chip neutral";
@@ -252,6 +258,18 @@ export function montarAdmin(cont, registro, onChange, rol) {
       const u = us.find((x) => String(x.id) === a.dataset.id);
       if (!(await confirmar("Borrar usuario", `¿Borrar a ${u?.email}? Pierde el acceso al sistema.`, { peligro: true, okText: "Borrar" }))) return;
       try { await apiUsers("DELETE", a.dataset.id); pintarUsers(); } catch (e) { aviso("No se pudo borrar", e.message); }
+    });
+    tbody.querySelectorAll(".u-pass").forEach((a) => a.onclick = async () => {
+      const u = us.find((x) => String(x.id) === a.dataset.id);
+      const nueva = await pedir(`Nueva contraseña — ${u?.email || ""}`, {
+        cuerpo: "Se generó una al azar (podés editarla). La contraseña actual deja de funcionar al guardar.",
+        label: "Contraseña", valor: genPass(), okText: "Guardar" });
+      if (!nueva) return;
+      if (nueva.length < 6) { aviso("Muy corta", "La contraseña debe tener al menos 6 caracteres."); return; }
+      try {
+        await apiUsers("PUT", a.dataset.id, { pass: nueva });
+        await aviso("Contraseña actualizada", `Entregale esta contraseña a ${u?.email} (no se vuelve a mostrar):  ${nueva}`);
+      } catch (e) { aviso("No se pudo cambiar la contraseña", e.message); }
     });
     tbody.querySelectorAll(".u-role-edit").forEach((sel) => sel.onchange = async () => {
       try { await apiUsers("PUT", sel.dataset.id, { role: sel.value }); } catch (e) { aviso("No se pudo cambiar el rol", e.message); pintarUsers(); }

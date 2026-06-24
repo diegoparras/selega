@@ -77,6 +77,7 @@ export const sumarGasto = async (email, monto) => void (await q("UPDATE users SE
 export const gastoTotal = async () => Number((await q("SELECT COALESCE(SUM(gasto),0) AS t FROM users")).rows[0].t);
 export const setLimite = async (id, n) => void (await q("UPDATE users SET limite=$1 WHERE id=$2", [n, id]));
 export const setUserRole = async (id, role) => void (await q("UPDATE users SET role=$1 WHERE id=$2", [role, id]));
+export const setUserPassword = async (id, pass) => void (await q("UPDATE users SET pass=$1 WHERE id=$2", [hashPassword(pass), id]));
 export const setUserActivo = async (id, activo) => void (await q("UPDATE users SET activo=$1 WHERE id=$2", [!!activo, id]));
 export const deleteUser = async (id) => void (await q("DELETE FROM users WHERE id=$1", [id]));
 export const incUsados = async (email) => void (await q("UPDATE users SET usados=usados+1 WHERE email=$1", [email]));

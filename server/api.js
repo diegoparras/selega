@@ -418,6 +418,11 @@ export async function handle(req, res, path) {
       }
       if (b.limite != null) await repo.setLimite(id, b.limite | 0);
       if (b.activo != null) await repo.setUserActivo(id, b.activo);
+      if (b.pass != null) {   // resetear contraseña de otro usuario (la protección de superadmin de arriba aplica)
+        if (String(b.pass).length < 6) return json(res, 400, { error: "la contraseña debe tener al menos 6 caracteres" });
+        await repo.setUserPassword(id, String(b.pass));
+        await repo.auditar(user.email, null, "reset_password", String(id));
+      }
       return json(res, 200, { ok: true });
     }
     if (seg[2] === "users" && seg[3] && m === "DELETE") {
