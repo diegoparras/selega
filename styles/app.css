@@ -517,3 +517,21 @@ button.mini { padding: 3px 9px; font-size: 13px; line-height: 1.2; }
 .jhl .js { color: #2e9e5b; }
 .jhl .jn { color: #c2792b; }
 .jhl .jb, .jhl .ju { color: #9a5cd0; }
+
+/* Panel de verificación de firma digital (Trustux) — bloque "Firma digital" del rail */
+#btn-verificar-firma { width: 100%; }
+.firma-result { margin-top: 10px; display: grid; gap: 10px; }
+.firma-hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+.firma-error { color: #cf4a64; }
+.firma-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.firma-global { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.firma-card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--card-2); }
+.firma-card-top { display: flex; align-items: center; gap: 8px; }
+.firma-firmante { font-size: 13px; color: var(--text); margin: 4px 0 6px; }
+.firma-detalle, .firma-obs { list-style: none; margin: 0; padding: 0; font-size: 12.5px; display: grid; gap: 2px; }
+.firma-detalle .fok { color: #2e9e5b; }
+.firma-detalle .fmal { color: #cf4a64; }
+.firma-detalle .fnota { color: var(--muted); }
+.firma-obs { margin-top: 6px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; }
+.firma-obs li { list-style: disc; margin-left: 16px; }
+.bq-chip:not(.neutral) { color: #fff; }

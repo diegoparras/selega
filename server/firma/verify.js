@@ -7,8 +7,8 @@
 // Funciona igual en Node y en el browser (mismo pkijs). Acá el engine se cablea con la
 // WebCrypto de Node; en el browser, pkijs toma `globalThis.crypto` solo.
 import * as asn1js from "asn1js";
-import { ContentInfo, SignedData, Certificate, CertificateChainValidationEngine,
-         setEngine, CryptoEngine } from "pkijs";
+import { ContentInfo, SignedData, Certificate, CertificateRevocationList,
+         CertificateChainValidationEngine, setEngine, CryptoEngine } from "pkijs";
 import { webcrypto } from "node:crypto";
 import { extraerFirmas, toAB } from "./pades.js";
 
@@ -49,6 +49,42 @@ export function cargarCert(pemOrDer) {
   return Certificate.fromBER(toAB(Buffer.from(der)));
 }
 
+/** Carga una lista de revocación (CRL) desde PEM o DER → pkijs.CertificateRevocationList. */
+export function cargarCRL(pemOrDer) {
+  let der = pemOrDer;
+  if (typeof pemOrDer === "string" || /-----BEGIN/.test(pemOrDer.toString("latin1").slice(0, 64))) {
+    const b64 = pemOrDer.toString("latin1").replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
+    der = Buffer.from(b64, "base64");
+  }
+  return CertificateRevocationList.fromBER(toAB(Buffer.from(der)));
+}
+
+// Revocación OFFLINE: ¿el serial del firmante figura en alguna CRL de su emisor?
+// Mira las CRL embebidas en la firma (PAdES-LT valida sin red) y las provistas por el
+// trust store. No sale a la red: si no hay CRL del emisor, queda "no-verificada".
+function chequearRevocacion(cert, sd, crlsProvistas) {
+  const embebidas = (sd.crls || []).filter((c) => c instanceof CertificateRevocationList);
+  const todas = [...embebidas, ...crlsProvistas];
+  if (!todas.length) return { metodo: "no-verificada", revocado: false };
+  const esEmbebida = (crl) => embebidas.includes(crl);
+  const issuer = cert.issuer.toString();
+  const serial = hex(cert.serialNumber.valueBlock.valueHexView);
+  const delEmisor = todas.filter((crl) => crl.issuer.toString() === issuer);
+  if (!delEmisor.length) {
+    return { metodo: embebidas.length ? "embebida" : "crl-provista", revocado: false, observacion: "sin CRL del emisor" };
+  }
+  for (const crl of delEmisor) {
+    const hit = (crl.revokedCertificates || []).find(
+      (rc) => hex(rc.userCertificate.valueBlock.valueHexView) === serial);
+    if (hit) {
+      let fecha = null;
+      try { fecha = hit.revocationDate.value.toISOString(); } catch { /* sin fecha legible */ }
+      return { metodo: esEmbebida(crl) ? "embebida" : "crl-provista", revocado: true, fecha };
+    }
+  }
+  return { metodo: esEmbebida(delEmisor[0]) ? "embebida" : "crl-provista", revocado: false };
+}
+
 const attr = (cert, oid) => {
   const tv = cert.subject.typesAndValues.find((t) => t.type === oid);
   return tv ? tv.value.valueBlock.value : null;
@@ -75,7 +111,7 @@ function certDelFirmante(sd) {
  * @param {{trustRoots?: Certificate[]}} opts
  * @returns {Promise<{firmas: object[], global: string}>}
  */
-export async function verificar(pdf, { trustRoots = [] } = {}) {
+export async function verificar(pdf, { trustRoots = [], crls = [] } = {}) {
   initEngine();
   const firmas = [];
 
@@ -122,6 +158,12 @@ export async function verificar(pdf, { trustRoots = [] } = {}) {
         };
       }
 
+      // 2b) Revocación (offline): ¿el certificado está en una CRL de su emisor?
+      v.revocacion = cert ? chequearRevocacion(cert, sd, crls) : { metodo: "no-verificada", revocado: false };
+      if (v.revocacion.revocado) {
+        v.observaciones.push(`Certificado revocado${v.revocacion.fecha ? " el " + v.revocacion.fecha.slice(0, 10) : ""}.`);
+      }
+
       // 3) Cadena hasta una raíz de confianza.
       if (cert && trustRoots.length) {
         const certs = (sd.certificates || []).filter((c) => c instanceof Certificate);
@@ -135,8 +177,8 @@ export async function verificar(pdf, { trustRoots = [] } = {}) {
         if (!trustRoots.length) v.observaciones.push("Sin trust store cargado: no se evaluó la cadena.");
       }
 
-      // 4) Veredicto (semáforo).
-      if (!v.integridad.ok) v.estado = "invalida";
+      // 4) Veredicto (semáforo). Integridad rota o certificado revocado → inválida.
+      if (!v.integridad.ok || v.revocacion.revocado) v.estado = "invalida";
       else if (v.cadena.confiable) v.estado = "valida";
       else v.estado = "observada";
     } catch (e) {

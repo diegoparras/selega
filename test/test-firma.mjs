@@ -41,4 +41,10 @@ await test("PDF con SHA-1 → 🔴 inválida (algoritmo inseguro)", async () => 
   assert.equal(r.firmas[0].algoritmo, "SHA-1");
 });
 
-console.log(`\n${ok}/4 OK`);
+await test("PDF de cert revocado → 🔴 inválida (CRL del trust store)", async () => {
+  const r = await verificarFirmaPdf(fx("06-firmado-revocado.pdf"));
+  assert.equal(r.global, "invalida");
+  assert.equal(r.firmas[0].revocacion.revocado, true);
+});
+
+console.log(`\n${ok}/5 OK`);
