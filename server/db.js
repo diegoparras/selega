@@ -88,6 +88,22 @@ export async function createUser({ email, pass, role = "agente", limite = 0 }) {
 }
 export const setUserPass = async (id, pw) => void (await q("UPDATE users SET pass=$1 WHERE id=$2", [hashPassword(pw), id]));
 
+// Federación (Lockatus): find-or-create del usuario por email. El hub es la fuente de
+// verdad de la identidad y el rol → si el usuario existe, se le actualiza el rol y se lo
+// reactiva; si no, se crea con una contraseña aleatoria (nunca se usa: no hay login local
+// para federados). Devuelve la fila del usuario (con su rol efectivo). El rol ya viene
+// validado/mapeado por el caller contra el catálogo de Selega.
+export async function upsertFederatedUser({ email, role }) {
+  const existing = await getUserByEmail(email);
+  if (existing) {
+    await q("UPDATE users SET role=$1, activo=true WHERE id=$2", [role, existing.id]);
+    return { ...existing, role, activo: true };
+  }
+  const pass = randomBytes(24).toString("hex"); // placeholder: el federado nunca usa login local
+  await createUser({ email, pass, role });
+  return await getUserByEmail(email);
+}
+
 // ---- trabajos ----
 export async function crearTrabajo(t) {
   const r = await q(`INSERT INTO trabajos(jurisdiccion,comitente,cuit,tipo,estado,cifras,controles,desenlace,pack_version,usuario)

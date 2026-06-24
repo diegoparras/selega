@@ -29,8 +29,11 @@ const server = http.createServer(async (req, res) => {
     const file = normalize(join(root, path === "/" ? "/index.html" : path));
     if (!file.startsWith(root)) { res.writeHead(403, txt); return res.end("forbidden"); }
     let data = await readFile(file);
-    // index.html: inyectar la versión (placeholder __SELEGA_VERSION__) desde package.json.
-    if (path === "/" || path === "/index.html") data = Buffer.from(data.toString("utf8").replace(/__SELEGA_VERSION__/g, VERSION), "utf8");
+    // index.html: inyectar versión + modo de auth (placeholders) al servir.
+    if (path === "/" || path === "/index.html") data = Buffer.from(
+      data.toString("utf8")
+        .replace(/__SELEGA_VERSION__/g, VERSION)
+        .replace(/__SELEGA_AUTH_MODE__/g, config.authMode), "utf8");
     // Los vendors (pdf.js/tesseract/pdf-lib/fuentes, ~24MB) son INMUTABLES → cache larga
     // (evita re-bajarlos en cada OCR). El HTML/JS/CSS de la app se bustea con ?v=N → no-cache.
     const inmutable = path.startsWith("/public/vendor/");

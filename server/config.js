@@ -12,7 +12,18 @@ export const config = {
   adminEmail: process.env.SELEGA_ADMIN_EMAIL || "admin@selega.local",
   adminPass: process.env.SELEGA_ADMIN_PASS || "", // si vacío, se genera y se imprime una vez
   cookieName: "selega_session",
+  oidcCookieName: "selega_oidc", // transacción OIDC (verifier/state/nonce) en modo federado
   sessionTtlMs: 1000 * 60 * 60 * 12, // 12 h
+  // --- Federación opcional con Lockatus (el hub de identidad de la suite) ---
+  // Default 'local' = login propio multiusuario, sin cambios. En 'federado', el login
+  // delega en Lockatus (OIDC); el callback hace find-or-create del usuario por email y
+  // mapea el rol que asigna el hub → el resto de Selega (gating por rol) no cambia.
+  authMode: process.env.AUTH_MODE === "federado" ? "federado" : "local",
+  lockatus: {
+    issuer: (process.env.LOCKATUS_ISSUER || "").replace(/\/$/, ""),
+    clientId: process.env.LOCKATUS_CLIENT_ID || "selega",
+    redirectUri: process.env.LOCKATUS_REDIRECT_URI || "",
+  },
   // Poné SELEGA_SECURE_COOKIE=1 cuando Selega esté detrás de TLS (reverse proxy / HTTPS):
   // la cookie de sesión solo viaja por HTTPS. En dev/HTTP local queda en 0.
   cookieSecure: process.env.SELEGA_SECURE_COOKIE === "1",

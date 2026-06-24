@@ -163,6 +163,9 @@ body.booting::before { content: ""; position: fixed; inset: 0; z-index: 50;
 .login-sub { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
 .login-card input { text-align: center; }
 .login-err { color: var(--err); font-size: 12.5px; min-height: 16px; }
+.login-sso { display: inline-block; text-decoration: none; text-align: center; padding: 10px 14px;
+  border-radius: var(--radius); background: var(--accent, #a8324a); color: #fff; font-weight: 600; font-size: 14px; }
+.login-sso:hover { filter: brightness(1.06); }
 @keyframes cardpop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
 
 /* Lienzo PDF (vista partida: documento | cifras) */
@@ -518,20 +521,28 @@ button.mini { padding: 3px 9px; font-size: 13px; line-height: 1.2; }
 .jhl .jn { color: #c2792b; }
 .jhl .jb, .jhl .ju { color: #9a5cd0; }
 
-/* Panel de verificación de firma digital (Trustux) — bloque "Firma digital" del rail */
+/* Panel de verificación de firma digital (Trustux) — bloque "Firma digital" del rail.
+   Sin emojis: estados con iconos SVG inline (.firma-ico) coloreados por currentColor. */
 #btn-verificar-firma { width: 100%; }
 .firma-result { margin-top: 10px; display: grid; gap: 10px; }
 .firma-hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
 .firma-error { color: #cf4a64; }
-.firma-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.firma-ico { width: 16px; height: 16px; flex: 0 0 auto; }
 .firma-global { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.firma-global .firma-ico { width: 18px; height: 18px; }
 .firma-card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--card-2); }
 .firma-card-top { display: flex; align-items: center; gap: 8px; }
 .firma-firmante { font-size: 13px; color: var(--text); margin: 4px 0 6px; }
-.firma-detalle, .firma-obs { list-style: none; margin: 0; padding: 0; font-size: 12.5px; display: grid; gap: 2px; }
-.firma-detalle .fok { color: #2e9e5b; }
-.firma-detalle .fmal { color: #cf4a64; }
-.firma-detalle .fnota { color: var(--muted); }
+.firma-detalle, .firma-obs { list-style: none; margin: 0; padding: 0; font-size: 12.5px; display: grid; gap: 3px; }
+.firma-detalle li { display: flex; align-items: flex-start; gap: 6px; }
 .firma-obs { margin-top: 6px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; }
 .firma-obs li { list-style: disc; margin-left: 16px; }
-.bq-chip:not(.neutral) { color: #fff; }
+/* Colores de estado (sirven para texto e icono vía currentColor) */
+.c-ok { color: #1f9d57; }
+.c-warn { color: #d6a01a; }
+.c-bad { color: #cf4a64; }
+.c-mut { color: var(--muted); }
+.firma-chip.c-ok, .firma-chip.c-warn, .firma-chip.c-bad { color: #fff; }
+.firma-chip.c-ok { background: #1f9d57; }
+.firma-chip.c-warn { background: #d6a01a; }
+.firma-chip.c-bad { background: #cf4a64; }

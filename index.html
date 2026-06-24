@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Selega — Control de Estados Contables para Legalizaciones</title>
   <meta name="selega-version" content="__SELEGA_VERSION__" />
+  <meta name="selega-auth-mode" content="__SELEGA_AUTH_MODE__" />
   <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
   <script>if (localStorage.getItem("selega.theme") === "dark") document.documentElement.dataset.theme = "dark";</script>
-  <link rel="stylesheet" href="./styles/app.css?v=39" />
+  <link rel="stylesheet" href="./styles/app.css?v=40" />
 </head>
 <body class="booting">
   <div id="login" class="login-overlay hidden">
@@ -19,8 +20,26 @@
       <input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" required />
       <button type="submit">Ingresar</button>
       <div id="login-err" class="login-err"></div>
+      <!-- Federado (AUTH_MODE=federado): delega el login en Lockatus, el hub de identidad. -->
+      <a id="login-sso" class="login-sso hidden" href="/api/auth/sso/login">Entrar con Lockatus</a>
     </form>
   </div>
+  <script>
+    // En modo federado, la pantalla de login muestra "Entrar con Lockatus" y oculta el
+    // form de usuario/clave (la identidad y el rol los gestiona el hub). Self-contained.
+    (function () {
+      var mode = (document.querySelector('meta[name="selega-auth-mode"]') || {}).content || "local";
+      if (mode !== "federado") return;
+      var fed = document.getElementById("login-sso");
+      var email = document.getElementById("login-email");
+      var pass = document.getElementById("login-pass");
+      var submit = document.querySelector("#login-form button[type=submit]");
+      if (email) { email.required = false; email.classList.add("hidden"); }
+      if (pass) { pass.required = false; pass.classList.add("hidden"); }
+      if (submit) submit.classList.add("hidden");
+      if (fed) fed.classList.remove("hidden");
+    })();
+  </script>
 
   <header>
     <a id="btn-inicio" class="logo-link" title="Inicio">

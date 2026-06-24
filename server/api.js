@@ -6,6 +6,11 @@ import { config } from "./config.js";
 import { verifyPassword, signSession, verifySession } from "./auth.js";
 import { extraerDePDF } from "./extraer.js";
 import { verificarFirmaPdf, trustRootsInfo } from "./firma/index.js";
+import { createLockatus, pkce, randomId } from "./lockatus.js";
+
+// Cliente OIDC hacia Lockatus (solo modo federado; construcción perezosa, una vez).
+let _lk = null;
+const lk = () => (_lk ||= createLockatus(config.lockatus));
 
 // Niveles de usuario. 'funcional' queda como alias histórico de 'agente'.
 // superadmin = comisiona el sistema (motores/jurisdicciones/infra); por encima de admin.
@@ -130,6 +135,54 @@ export async function handle(req, res, path) {
       jurisdicciones: await jurisHabilitadas(),   // [] = todas (el superadmin scopea el install)
       ia_disponible: cloudOn || localOn,
       firma_disponible: (await cap("cap_firma")) === "1" });   // verificación de firma (gateada por superadmin)
+  }
+
+  // ---- SSO federado con Lockatus (solo authMode=federado; público, antes del gate) ----
+  // Modo de auth: la SPA lo consulta para mostrar "Entrar con Lockatus" en vez del form.
+  if (path === "/api/auth/mode" && m === "GET") return json(res, 200, { mode: config.authMode });
+
+  if (path === "/api/auth/sso/login" && m === "GET") {
+    if (config.authMode !== "federado") { res.writeHead(302, { Location: "/" }); return res.end(); }
+    const { verifier, challenge } = pkce();
+    const state = randomId(), nonce = randomId();
+    const tx = signSession({ verifier, state, nonce, exp: Date.now() + 600e3 }, await repo.sessionSecret());
+    res.writeHead(302, {
+      Location: lk().authorizeUrl({ state, nonce, challenge }),
+      "Set-Cookie": `${config.oidcCookieName}=${tx}; HttpOnly; SameSite=Lax; Path=/${config.cookieSecure ? "; Secure" : ""}; Max-Age=600`,
+    });
+    return res.end();
+  }
+  // Vuelta de Lockatus: canjea el código, verifica los tokens, find-or-create del usuario
+  // por email y siembra la MISMA cookie de sesión que el login local → el gate no cambia.
+  if (path === "/api/auth/sso/callback" && m === "GET") {
+    if (config.authMode !== "federado") { res.writeHead(302, { Location: "/" }); return res.end(); }
+    const qs = new URLSearchParams(req.url.split("?")[1] || "");
+    if (qs.get("error")) { res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" }); return res.end("Acceso denegado por Lockatus: " + qs.get("error")); }
+    const secret = await repo.sessionSecret();
+    const tx = verifySession(cookies(req)[config.oidcCookieName], secret);
+    const code = qs.get("code"), state = qs.get("state");
+    if (!tx || !code || state !== tx.state) { res.writeHead(302, { Location: "/" }); return res.end(); }
+    try {
+      const tok = await lk().exchange({ code, verifier: tx.verifier });
+      const idc = await lk().verifyJwt(tok.id_token, { audience: config.lockatus.clientId, nonce: tx.nonce });
+      const acc = await lk().verifyJwt(tok.access_token, { audience: config.lockatus.clientId });
+      const email = idc.email || acc.email || acc.sub;
+      if (!email) throw new Error("sin email en el token");
+      const role = ROLES.includes(acc.role) ? acc.role : "agente"; // catálogo idéntico; fallback = menor privilegio
+      const u = await repo.upsertFederatedUser({ email, role });
+      const sess = signSession({ email: u.email, exp: Date.now() + config.sessionTtlMs }, secret);
+      await repo.auditar(u.email, null, "login_sso");
+      res.writeHead(302, {
+        Location: "/",
+        "Set-Cookie": [
+          `${config.oidcCookieName}=; HttpOnly; Path=/; Max-Age=0`,
+          `${config.cookieName}=${sess}; HttpOnly; SameSite=Strict; Path=/${config.cookieSecure ? "; Secure" : ""}; Max-Age=${config.sessionTtlMs / 1000}`,
+        ],
+      });
+      return res.end();
+    } catch {
+      res.writeHead(302, { Location: "/?sso=error" }); return res.end();
+    }
   }
 
   // ---- extracción de PDF (local, no sale del contenedor; no requiere sesión) ----
