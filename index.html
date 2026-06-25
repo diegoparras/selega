@@ -8,7 +8,7 @@
   <meta name="selega-auth-mode" content="__SELEGA_AUTH_MODE__" />
   <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
   <script>if (localStorage.getItem("selega.theme") === "dark") document.documentElement.dataset.theme = "dark";</script>
-  <link rel="stylesheet" href="./styles/app.css?v=40" />
+  <link rel="stylesheet" href="./styles/app.css?v=41" />
 </head>
 <body class="booting">
   <div id="login" class="login-overlay hidden">
@@ -197,6 +197,7 @@
         <div class="ver-actions">
           <button id="btn-confirmar">Confirmar y guardar</button>
           <button id="btn-observar" class="ghost">Revisar todo</button>
+          <button id="btn-informe" class="ghost" title="Exportar un informe PDF con el diseño de Selega">Exportar informe PDF</button>
         </div>
       </div>
       <details class="bloque" id="bq-cruces" open>
@@ -241,6 +242,6 @@
 
   <main id="vista-admin" class="hidden"></main>
 
-  <script type="module" src="./src/app.js?v=49"></script>
+  <script type="module" src="./src/app.js?v=50"></script>
 </body>
 </html>

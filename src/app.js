@@ -16,6 +16,7 @@ import { fingerprint, mejorPlantilla } from "./core/plantillas.js";
 import { aviso, confirmar, pedir } from "./modal.js";
 import { SEMAFORO, ORDEN_SEM, ESTADO_LABEL } from "./core/veredicto.js";
 import { montarExpediente } from "./expediente.js";
+import { exportarInforme } from "./informe.js";
 import { montarSuper } from "./super.js";
 import { initFirma } from "./firma.js";
 
@@ -654,6 +655,22 @@ async function init() {
   $("#btn-guardar-trab").onclick = guardarTrabajo;
   $("#btn-confirmar").onclick = guardarTrabajo;
   $("#btn-observar").onclick = () => { $("#bq-cruces").open = $("#bq-cifras").open = $("#bq-controles").open = true; };
+  // Exportar informe PDF (documento Selega, no print de la web). Arma un `t` con lo que hay en
+  // pantalla y reusa pack/formato/veredicto ya computados (sin recalcular). Visible para el agente
+  // y heredado por admin/super; el auditor lo tiene oculto por CSS (es solo lectura, exporta del expediente).
+  $("#btn-informe").onclick = async () => {
+    const btn = $("#btn-informe"); const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = "Preparando…";
+    try {
+      const est = estadoTrabajo();
+      await exportarInforme(
+        { ...est, usuario: usuario.email, creado: null, modificado: new Date().toISOString() },
+        { pack, formato, registro: registroGlobal },
+      );
+    } catch (e) {
+      aviso("No se pudo exportar", "No se pudo generar el informe: " + e.message);
+    } finally { btn.disabled = false; btn.textContent = orig; }
+  };
   aplicarOrdenBloques();
   montarDragBloques();
   $("#btn-trabajos").onclick = () => {

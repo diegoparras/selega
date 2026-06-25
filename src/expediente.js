@@ -8,6 +8,7 @@ import { cargarPack } from "./rules/loader.js";
 import { cargarFormato, formatear } from "./core/formato.js";
 import { esc } from "./util.js";
 import { pedir } from "./modal.js";
+import { exportarInforme } from "./informe.js";
 
 const ICONO_CRUCE = { OK: "✓", DIFIERE: "✗", "N/A": "·", FALTA_DATO: "?" };
 const fecha = (s) => s ? new Date(s).toLocaleString("es-AR") : "—";
@@ -102,9 +103,11 @@ export async function montarExpediente(cont, t, opts = {}) {
       </div>` : ""}
     </div>`;
 
-  // Navegación + export
+  // Navegación + export: el botón "Exportar" arma el INFORME lindo (documento Selega) y lo
+  // imprime/guarda como PDF. Reusa pack/formato/veredicto ya computados acá (no recalcula).
   cont.querySelector("#exp-volver").onclick = () => opts.onVolver && opts.onVolver();
-  cont.querySelector("#exp-exportar").onclick = () => window.print();
+  cont.querySelector("#exp-exportar").onclick = () =>
+    exportarInforme(t, { pack, formato, veredicto: v, registro });
 
   // Acciones del supervisor
   if (opts.acciones && opts.onRevisar) {
