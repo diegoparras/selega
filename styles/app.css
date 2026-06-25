@@ -325,22 +325,15 @@ body:not(.con-pdf) .rail { flex: 1 1 auto; max-width: 680px; margin: 0 auto; } /
 .exp-det { color: var(--muted-2); width: 100%; padding-left: 2px; }
 .exp-acciones { display: flex; gap: 10px; justify-content: flex-end; }
 
-/* Exportar (legacy): print del expediente crudo. Ahora "Exportar" usa el INFORME lindo
-   (body.imprimiendo-informe), así que esta regla SOLO aplica si NO estamos imprimiendo el
-   informe — coordina con el @media print del informe (más abajo) para no pisarse. */
+/* Print del expediente crudo (Ctrl+P del navegador sobre la vista expediente). El INFORME
+   ya no usa print: se descarga como PDF vectorial (src/informe.js con pdf-lib). */
 @media print {
-  body:not(.imprimiendo-informe) header,
-  body:not(.imprimiendo-informe) #login,
-  body:not(.imprimiendo-informe) #vista-inicio,
-  body:not(.imprimiendo-informe) #vista-control,
-  body:not(.imprimiendo-informe) #vista-bandeja,
-  body:not(.imprimiendo-informe) #vista-admin,
-  body:not(.imprimiendo-informe) .exp-barra,
-  body:not(.imprimiendo-informe) .exp-acciones { display: none !important; }
-  body:not(.imprimiendo-informe) #vista-expediente { display: block !important; }
-  body:not(.imprimiendo-informe) { background: #fff; }
-  body:not(.imprimiendo-informe) .exp { max-width: none; }
-  body:not(.imprimiendo-informe) .exp-seccion { box-shadow: none; border-color: #ccc; break-inside: avoid; }
+  header, #login, #vista-inicio, #vista-control, #vista-bandeja, #vista-admin,
+  .exp-barra, .exp-acciones { display: none !important; }
+  #vista-expediente { display: block !important; }
+  body { background: #fff; }
+  .exp { max-width: none; }
+  .exp-seccion { box-shadow: none; border-color: #ccc; break-inside: avoid; }
 }
 .badge-ro { color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); background: color-mix(in srgb, var(--warn) 12%, transparent); }
 /* El auditor NO escribe: se ocultan las acciones de escritura (el backend además las bloquea). */
@@ -557,107 +550,3 @@ button.mini { padding: 3px 9px; font-size: 13px; line-height: 1.2; }
 .firma-chip.c-ok { background: #1f9d57; }
 .firma-chip.c-warn { background: #d6a01a; }
 .firma-chip.c-bad { background: #cf4a64; }
-
-/* ======================================================================
-   INFORME PDF — documento A4 propio (no print de la web). #doc-print vive
-   en el DOM oculto en pantalla; el @media print muestra SOLO ese contenedor.
-   Tinta sobre papel (colores fijos, no tokens de tema): el PDF es siempre
-   claro y debe leerse como un DOCUMENTO. Sin glow; cifras en mono.
-   ====================================================================== */
-#doc-print { display: none; }                 /* oculto en pantalla; visible solo al imprimir */
-
-.doc {
-  font-family: "Inter", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #16161a; line-height: 1.5; letter-spacing: -.006em;
-  max-width: 178mm; margin: 0 auto;
-}
-.doc-membrete {
-  display: flex; align-items: center; gap: 12px;
-  padding-bottom: 12px; margin-bottom: 18px; border-bottom: 2px solid #a8324a;
-}
-.doc-logo { width: 34px; height: 34px; border-radius: 8px; flex: 0 0 auto; }
-.doc-membrete-txt { flex: 1; min-width: 0; }
-.doc-marca { font-size: 18px; font-weight: 700; letter-spacing: -.02em; color: #a8324a; line-height: 1.1; }
-.doc-sub { font-size: 11px; color: #5a5a64; }
-.doc-jur { font-size: 11px; color: #3c3c44; text-align: right; max-width: 42%; font-weight: 600; }
-
-.doc-titulo { font-size: 22px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 2px; color: #16161a; }
-.doc-cuit { font-family: var(--mono); font-size: 12.5px; color: #3c3c44; margin-bottom: 16px; }
-
-.doc-meta {
-  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 22px;
-  margin: 0 0 18px; padding: 12px 14px; border: 1px solid #d8d8de; border-radius: 8px; background: #fafafb;
-}
-.doc-meta div { display: flex; flex-direction: column; gap: 1px; }
-.doc-meta dt { font-size: 9.5px; text-transform: uppercase; letter-spacing: .07em; color: #70707b; font-weight: 700; }
-.doc-meta dd { margin: 0; font-size: 12.5px; color: #16161a; }
-
-/* Desenlace destacado: caja con color según el semáforo (borde+fondo plano, sin glow). */
-.doc-desenlace { border: 1.5px solid #d8d8de; border-left-width: 5px; border-radius: 8px; padding: 12px 16px; margin: 0 0 20px; background: #fafafb; }
-.doc-des-cab { display: flex; align-items: baseline; gap: 10px; }
-.doc-des-lbl { font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: #70707b; }
-.doc-des-txt { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
-.doc-des-verde { border-color: #1a7f37; background: #f1f8f3; }
-.doc-des-verde .doc-des-txt { color: #146c2e; }
-.doc-des-amarillo { border-color: #9a6700; background: #fbf7ec; }
-.doc-des-amarillo .doc-des-txt { color: #8a5b00; }
-.doc-des-rojo { border-color: #cf222e; background: #fcf1f1; }
-.doc-des-rojo .doc-des-txt { color: #b51b26; }
-.doc-motivos { margin: 8px 0 0; padding-left: 18px; font-size: 12px; color: #3c3c44; }
-.doc-motivos li { margin: 2px 0; }
-.doc-motivos-vacio { margin: 6px 0 0; font-size: 12px; color: #70707b; }
-
-.doc-seccion { margin: 0 0 18px; break-inside: avoid; }
-.doc-h2 {
-  font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: #a8324a;
-  margin: 0 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e4e4ea;
-  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
-}
-.doc-resumen { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0; text-transform: none; color: #70707b; font-weight: 500; }
-
-.doc-tabla { width: 100%; border-collapse: collapse; font-size: 12px; }
-.doc-tabla th {
-  text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em;
-  color: #70707b; font-weight: 700; padding: 4px 8px; border-bottom: 1.5px solid #c9c9d0;
-}
-.doc-tabla td { padding: 5px 8px; border-bottom: 1px solid #ececf1; vertical-align: top; }
-.doc-tabla tr:last-child td { border-bottom: none; }
-.doc-tabla .num, .doc-tabla th.num { text-align: right; }
-.doc-tabla td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-
-/* Estado del cruce: texto en color (OK/Difiere/N/A/Falta dato), sin emojis. */
-.doc-est { font-weight: 600; }
-.doc-est-ok { color: #146c2e; }
-.doc-est-difiere { color: #b51b26; }
-.doc-est-na { color: #70707b; }
-.doc-est-faltadato { color: #8a5b00; }
-.doc-est-dif { color: #b51b26; }
-
-.doc-cif-lbl { color: #3c3c44; }
-.doc-cif-est { font-size: 9.5px; color: #a8324a; margin-left: 8px; }
-.doc-cif-val { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-.doc-cif-val.vacia { color: #a0a0aa; }
-
-.doc-obs td { padding: 6px 8px; }
-.doc-obs-st { white-space: nowrap; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; width: 1%; }
-.doc-obs-obs { color: #8a5b00; }
-.doc-obs-na { color: #70707b; }
-.doc-obs-cons { display: block; font-size: 10.5px; color: #70707b; font-style: italic; margin-top: 1px; }
-.doc-vacio { font-size: 12px; color: #70707b; margin: 4px 0; }
-
-.doc-pie {
-  margin-top: 26px; padding-top: 10px; border-top: 1px solid #e4e4ea;
-  font-size: 10px; color: #70707b; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-}
-.doc-pie-sep { color: #c9c9d0; }
-
-/* Al imprimir el informe: A4, márgenes de documento, y SOLO #doc-print visible.
-   Gana sobre el print del expediente porque ése está gateado a :not(.imprimiendo-informe). */
-@page { size: A4; margin: 18mm 16mm; }
-@media print {
-  body.imprimiendo-informe > *:not(#doc-print) { display: none !important; }
-  body.imprimiendo-informe { background: #fff; }
-  #doc-print { display: block !important; }
-  .doc-seccion, .doc-desenlace, .doc-meta, .doc-tabla tr { break-inside: avoid; }
-  .doc-membrete { break-after: avoid; }
-}
