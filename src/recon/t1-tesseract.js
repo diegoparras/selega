@@ -17,12 +17,21 @@ async function getWorker() {
   workerP = (async () => {
     const Tesseract = await import(`${V}tesseract.esm.min.js`);
     const T = Tesseract.default || Tesseract;
-    return T.createWorker("spa", 1, {
+    const worker = await T.createWorker("spa", 1, {
       workerPath: `${V}worker.min.js`,
       corePath: V,
       langPath: V,
       logger: (m) => { if (m.status === "recognizing text") onProg?.(m.progress); },
     });
+    // Acotamos al alfabeto de los IMPORTES: dígitos y separadores. Más rápido y MUCHO más preciso
+    // con puntos/comas (deja de confundir separadores con letras "o/l/S"). PSM 6 = un bloque
+    // uniforme (la región marcada suele ser una o pocas líneas de cifras).
+    await worker.setParameters({
+      tessedit_char_whitelist: "0123456789.,-()$ ",
+      tessedit_pageseg_mode: "6",
+      preserve_interword_spaces: "1",
+    });
+    return worker;
   })();
   return workerP;
 }

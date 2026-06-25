@@ -50,6 +50,8 @@ const puedeEditarVista = () => ["agente", "admin", "superadmin"].includes(vistaR
 // SEMAFORO/ORDEN_SEM viven en core/veredicto.js (única fuente, compartida con el Expediente).
 let requiereRevision = false; // flag del Consejo (Admin): ¿los controles pasan por el supervisor?
 let jurisHabilitadas = [];    // jurisdicciones que atiende el install (superadmin); [] = todas
+let motorRegion = "auto";     // motor de lectura por región (superadmin): auto | texto | ocr
+let paginasTexto = [];        // texto nativo del PDF con posiciones (cache para la lectura por región)
 
 // Barra de progreso compartida (render del PDF, OCR…). frac=null la oculta.
 function progreso(frac, texto = "", eta = "") {
@@ -587,6 +589,7 @@ async function init() {
   vistaRol = rol;   // por defecto se ve con el rol real; admin/super lo pueden bajar ("ver como")
   requiereRevision = !!usuario.requiere_revision; // flag del Consejo (Admin)
   jurisHabilitadas = Array.isArray(usuario.jurisdicciones) ? usuario.jurisdicciones : []; // [] = todas (superadmin scopea)
+  motorRegion = usuario.motor_region || "auto"; // motor de lectura por región (lo fija el superadmin)
   // Firma digital (Trustux): solo si el superadmin la habilitó (cap_firma). Muestra el bloque y cablea el panel.
   if (usuario.firma_disponible) {
     const bf = $("#bq-firma"); if (bf) bf.hidden = false;
@@ -707,15 +710,31 @@ async function init() {
       const destino = defs.find((c) => c.id === campoObjetivo);
       hint(`Leyendo región para "${destino.label}"…`);
       try {
-        const { texto, confianza } = await recon.reconocer("region", { canvas: crop });
-        const n = extraerNumero(texto, formato);
-        if (n == null) { hint(`No se leyó un número (“${texto.trim().slice(0, 24)}”). Reintentá.`); return; }
+        let n = null, via = "", conf = 1;
+        // 1) Texto NATIVO del PDF (instantáneo y EXACTO: respeta puntos y comas) — salvo que el
+        //    superadmin fuerce OCR. Para PDFs digitales (la mayoría) esto reemplaza al OCR lento.
+        if (motorRegion !== "ocr") {
+          n = extraerNumero(textoEnRegion(paginasTexto, meta.pagina, meta.rect0), formato);
+          if (n != null) via = "texto del PDF";
+        }
+        // 2) OCR Tesseract: si se forzó OCR, o el texto nativo no dio número (región escaneada).
+        if (n == null && motorRegion !== "texto") {
+          const r = await recon.reconocer("region", { canvas: crop });
+          n = extraerNumero(r.texto, formato); conf = r.confianza ?? 0; via = "OCR";
+        }
+        if (n == null) {
+          hint(motorRegion === "texto"
+            ? "Sin texto nativo en la región (¿escaneado? el superadmin puede poner el motor en OCR/Auto)."
+            : "No se leyó un número. Reintentá marcando mejor la cifra.");
+          return;
+        }
         cifras[campoObjetivo] = n;
         provenance[campoObjetivo] = { pagina: meta.pagina, rect: meta.rect0 }; // marco sin rotar
         pintarCifras(); recomputar(); marcarProvenance();
-        hint(`✓ ${destino.label} = ${fmt(n)}  ·  OCR ${Math.round(confianza * 100)}% (p.${meta.pagina})`);
+        const detalle = via === "OCR" ? `OCR ${Math.round(conf * 100)}%` : via;
+        hint(`✓ ${destino.label} = ${fmt(n)}  ·  ${detalle} (p.${meta.pagina})`);
       } catch (err) {
-        hint("OCR falló: " + err.message);
+        hint("Lectura falló: " + err.message);
       } finally {
         setTimeout(() => hint(hintBase), 5000);
       }
@@ -853,6 +872,7 @@ async function init() {
       if ($("#chk-auto").checked) { progreso(0.95, "Enderezando páginas…"); await pv.autoEnderezar(); }
       // 2) ¿Nativo o escaneado? (lo decide el texto del PDF, ya renderizado).
       const pags = await pv.textoNativoConPos();
+      paginasTexto = pags;            // cache para la lectura por región (texto nativo, sin re-extraer)
       const esNativo = pags.some((p) => p.items.length > 5);
       if (esNativo) {
         // Nativo: extracción por anclas on-prem (probada). Si no puede, NO es fatal.
