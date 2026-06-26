@@ -23,7 +23,7 @@ const ROUTINGS = [
 ];
 
 export async function montarSuper(cont, registro, onChange) {
-  let cfg = { jurisdicciones: [], cap_vlm_local: false, ollama_url: "", ollama_model: "", ollama_keep: "demanda", ia_routing: "local-first", cap_ocr: true, data_collection_deny: true, cap_firma: false, cap_firma_ocsp: false, motor_region: "auto", motores_ocr: ["t2-paddleocr", "t1-tesseract", "t3-ocrs"] };
+  let cfg = { jurisdicciones: [], cap_vlm_local: false, ollama_url: "", ollama_model: "", ollama_keep: "demanda", ia_routing: "local-first", cap_ocr: true, data_collection_deny: true, cap_firma: false, cap_firma_ocsp: false, motores_ocr: ["t2-paddleocr", "t1-tesseract", "t3-ocrs"] };
   try { cfg = { ...cfg, ...(await (await fetch("/api/super/config")).json()) }; } catch { /* defaults */ }
   const jurSet = new Set(cfg.jurisdicciones || []);
   const ocrSet = new Set(cfg.motores_ocr || []);
@@ -77,15 +77,6 @@ export async function montarSuper(cont, registro, onChange) {
           <div class="sup-motor">
             <div class="sup-motor-h"><strong>Texto nativo + OCR</strong><span class="sup-badge ok">siempre</span></div>
             <p class="adm-hint">pdf.js (texto nativo) + Tesseract por región — corren en el navegador, sin costo. Es el camino por defecto.</p>
-            <div class="adm-grid">
-              <label>Lectura por región</label>
-              <select id="sup-motor-region">
-                <option value="auto">Automático — texto del PDF y, si no hay, OCR (recomendado)</option>
-                <option value="texto">Solo texto del PDF — instantáneo y exacto (PDFs digitales)</option>
-                <option value="ocr">Solo OCR (Tesseract) — para escaneados</option>
-              </select>
-            </div>
-            <p class="adm-hint">Para balances digitales conviene "texto del PDF": lee al instante y respeta puntos y comas (sin los errores del OCR).</p>
           </div>
 
           <div class="sup-motor">
@@ -162,7 +153,6 @@ export async function montarSuper(cont, registro, onChange) {
   cont.querySelector("#sup-volver").onclick = () => onChange?.("volver");
   // Estado del tanque: off / demanda / siempre (combina el toggle y el modo de carga).
   cont.querySelector("#sup-local-estado").value = cfg.cap_vlm_local ? (cfg.ollama_keep || "demanda") : "off";
-  cont.querySelector("#sup-motor-region").value = cfg.motor_region || "auto";
   cont.querySelector("#sup-datacol").value = cfg.data_collection_deny ? "deny" : "allow";
   // Firma electrónica: toggle con guardado inmediato (cap_firma, gateado server-side).
   cont.querySelector("#sup-firma").value = cfg.cap_firma ? "on" : "off";
@@ -318,7 +308,6 @@ export async function montarSuper(cont, registro, onChange) {
       ollama_url: cont.querySelector("#sup-ollama-url").value.trim(),
       ollama_model: cont.querySelector("#sup-ollama-model").value,
       ia_routing: cont.querySelector("#sup-routing").value,
-      motor_region: cont.querySelector("#sup-motor-region").value,
       data_collection_deny: cont.querySelector("#sup-datacol").value === "deny",
     };
     try {

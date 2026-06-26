@@ -22,12 +22,9 @@ const ROLES = ["agente", "supervisor", "auditor", "admin", "superadmin"];
 // Paddle + Tesseract + ocrs prendidos; Ollama (t4) y TrOCR (t5) quedan disponibles en el
 // registro pero NO en el default (los prende el superadmin a propósito).
 const MOTORES_OCR_DEFAULT = ["t2-paddleocr", "t1-tesseract", "t3-ocrs"];
-const CAP_DEFAULTS = { cap_ocr: "1", cap_vlm_local: "0", cap_firma: "0", cap_firma_ocsp: "0", ollama_url: "http://host.docker.internal:11434", ollama_model: "qwen2.5vl:3b", ia_routing: "local-first", ollama_keep: "demanda", data_collection_deny: config.dataCollectionDeny, motor_region: "auto", motores_ocr: JSON.stringify(MOTORES_OCR_DEFAULT) };
+const CAP_DEFAULTS = { cap_ocr: "1", cap_vlm_local: "0", cap_firma: "0", cap_firma_ocsp: "0", ollama_url: "http://host.docker.internal:11434", ollama_model: "qwen2.5vl:3b", ia_routing: "local-first", ollama_keep: "demanda", data_collection_deny: config.dataCollectionDeny, motores_ocr: JSON.stringify(MOTORES_OCR_DEFAULT) };
 // Ids de motores OCR conocidos (whitelist para la validación del PUT del superadmin).
 const MOTORES_OCR_IDS = ["t1-tesseract", "t2-paddleocr", "t3-ocrs", "t4-ollama"];
-// Motor de lectura por región (lo elige el superadmin): auto = texto nativo y, si no hay, OCR;
-// texto = solo la capa de texto del PDF (digital, exacto e instantáneo); ocr = solo Tesseract (escaneados).
-const MOTORES_REGION = ["auto", "texto", "ocr"];
 // keep_alive de Ollama: "siempre" = el modelo queda en RAM (rápido); "demanda" = carga al usarlo y se descarga tras 5 min.
 const keepAlive = (modo) => (modo === "siempre" ? -1 : "5m");
 
@@ -153,7 +150,6 @@ export async function handle(req, res, path) {
       requiere_revision: (await repo.getConfig("requiere_revision", "0")) === "1",
       jurisdicciones: await jurisHabilitadas(),   // [] = todas (el superadmin scopea el install)
       ia_disponible: cloudOn || localOn,
-      motor_region: await cap("motor_region"),   // motor de lectura por región (lo fija el superadmin)
       motores_ocr: await motoresOcrHabilitados(),   // set de motores OCR que el agente puede elegir
       firma_disponible: (await cap("cap_firma")) === "1" });   // verificación de firma (gateada por superadmin)
   }
@@ -446,7 +442,6 @@ export async function handle(req, res, path) {
         cap_firma: (await cap("cap_firma")) === "1", cap_firma_ocsp: (await cap("cap_firma_ocsp")) === "1",
         ollama_url: await cap("ollama_url"), ollama_model: await cap("ollama_model"), ollama_keep: await cap("ollama_keep"),
         ia_routing: await cap("ia_routing"), data_collection_deny: (await cap("data_collection_deny")) === "1",
-        motor_region: await cap("motor_region"),
         motores_ocr: await motoresOcrHabilitados(),
         jurisdicciones: await jurisHabilitadas(),
       });
@@ -461,7 +456,6 @@ export async function handle(req, res, path) {
       if (b.ollama_model) await repo.setConfig("ollama_model", String(b.ollama_model));
       if (b.ollama_keep) await repo.setConfig("ollama_keep", String(b.ollama_keep));
       if (b.ia_routing) await repo.setConfig("ia_routing", String(b.ia_routing));
-      if (b.motor_region && MOTORES_REGION.includes(String(b.motor_region))) await repo.setConfig("motor_region", String(b.motor_region));
       if (Array.isArray(b.motores_ocr)) {
         // Saneamos contra la whitelist; vacío → default (nunca dejar al agente sin motores).
         const set = b.motores_ocr.filter((id) => MOTORES_OCR_IDS.includes(String(id)));

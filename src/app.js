@@ -52,11 +52,9 @@ const puedeEditarVista = () => ["agente", "admin", "superadmin"].includes(vistaR
 // SEMAFORO/ORDEN_SEM viven en core/veredicto.js (única fuente, compartida con el Expediente).
 let requiereRevision = false; // flag del Consejo (Admin): ¿los controles pasan por el supervisor?
 let jurisHabilitadas = [];    // jurisdicciones que atiende el install (superadmin); [] = todas
-let motorRegion = "auto";     // motor de lectura por región (superadmin): auto | texto | ocr
 let motoresOcrHab = [];       // ids de motores OCR habilitados por el superadmin (de /api/me)
 let motorOcrElegido = localStorage.getItem("selega.motorOcr") || ""; // elección del agente ("" = automático)
 let escaneadoActual = false;  // ¿el PDF cargado es escaneado? (para recomendar OCR vs texto)
-let paginasTexto = [];        // texto nativo del PDF con posiciones (cache para la lectura por región)
 
 // Motores OCR que el agente PUEDE elegir: intersección registro ∩ habilitados ∩ disponible().
 // (El registro es la fuente de la metadata: etiqueta/cuando/dispositivo/peso.) Ordenados por
@@ -118,22 +116,19 @@ function pintarGuiaOcr() {
   guia.innerHTML = `${auto}${esc(m.cuando || "")} · <span class="cfg-ocr-disp" title="${dispoLabel(m.dispositivo)}">${ICO_DISPOSITIVO[m.dispositivo] || ""} ${esc(dispoLabel(m.dispositivo))}</span> · ${esc(m.peso || "")}`;
 }
 
-// Badge de auto-recomendación al cargar un PDF: digital → texto del PDF (instantáneo);
-// escaneado → conviene OCR, nombrando el motor elegido/recomendado. Respeta motorRegion del
-// superadmin (si forzó "texto", no recomendamos OCR; si forzó "ocr", no hablamos de texto).
+// Badge de auto-recomendación al cargar un PDF: digital → las cifras salen del texto nativo
+// (instantáneo); escaneado → al marcar un recuadro se lee por OCR, nombrando el motor elegido.
 function recomendarLectura(esNativo) {
   const el = document.querySelector("#hint-region");
   if (!el) return;
-  if (esNativo && motorRegion !== "ocr") {
-    el.textContent = "PDF digital → Texto del PDF (instantáneo)";
+  if (esNativo) {
+    el.textContent = "PDF digital → las cifras se leen del texto (instantáneo y exacto)";
     return;
   }
   const id = motorOcrEfectivo();
   const m = [...recon.registro.values()].find((x) => x.id === id);
   const nombre = m ? (m.etiqueta || m.id) : "OCR";
-  el.textContent = esNativo
-    ? `PDF digital · lectura por OCR (motor: ${nombre})`   // superadmin forzó OCR aunque sea digital
-    : `Escaneado → conviene OCR (motor: ${nombre})`;
+  el.textContent = `Escaneado → al marcar un recuadro se lee por OCR (motor: ${nombre})`;
 }
 
 // Barra de progreso compartida (render del PDF, OCR…). frac=null la oculta.
@@ -672,7 +667,6 @@ async function init() {
   vistaRol = rol;   // por defecto se ve con el rol real; admin/super lo pueden bajar ("ver como")
   requiereRevision = !!usuario.requiere_revision; // flag del Consejo (Admin)
   jurisHabilitadas = Array.isArray(usuario.jurisdicciones) ? usuario.jurisdicciones : []; // [] = todas (superadmin scopea)
-  motorRegion = usuario.motor_region || "auto"; // motor de lectura por región (lo fija el superadmin)
   motoresOcrHab = Array.isArray(usuario.motores_ocr) ? usuario.motores_ocr : []; // motores OCR habilitados (superadmin)
   setIaDisponible(!!usuario.ia_disponible);     // habilita el motor t4-ollama (VLM server) si la IA está prendida
   // Firma digital (Trustux): solo si el superadmin la habilitó (cap_firma). Muestra el bloque y cablea el panel.
@@ -962,7 +956,6 @@ async function init() {
       if ($("#chk-auto").checked) { progreso(0.95, "Enderezando páginas…"); await pv.autoEnderezar(); }
       // 2) ¿Nativo o escaneado? (lo decide el texto del PDF, ya renderizado).
       const pags = await pv.textoNativoConPos();
-      paginasTexto = pags;            // cache para la lectura por región (texto nativo, sin re-extraer)
       const esNativo = pags.some((p) => p.items.length > 5);
       escaneadoActual = !esNativo;    // recordatorio para recomendar OCR vs texto en el selector
       pintarSelectorOcr();            // re-marca "Recomendado" según digital/escaneado
