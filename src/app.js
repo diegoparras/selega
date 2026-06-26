@@ -11,6 +11,7 @@ import { esc, eyeify } from "./util.js";
 import { me, login, logout } from "./session.js";
 import { PdfView } from "./pdf-view.js";
 import * as recon from "./recon/index.js";
+import { setIaDisponible } from "./recon/t4-ollama.js";
 import { preprocesarParaOCR } from "./recon/preproceso.js";
 import { cargarFormato, guardarFormato, parseMonto as parseMontoF, extraerNumero, formatear } from "./core/formato.js";
 import { fingerprint, mejorPlantilla } from "./core/plantillas.js";
@@ -52,7 +53,88 @@ const puedeEditarVista = () => ["agente", "admin", "superadmin"].includes(vistaR
 let requiereRevision = false; // flag del Consejo (Admin): ¿los controles pasan por el supervisor?
 let jurisHabilitadas = [];    // jurisdicciones que atiende el install (superadmin); [] = todas
 let motorRegion = "auto";     // motor de lectura por región (superadmin): auto | texto | ocr
+let motoresOcrHab = [];       // ids de motores OCR habilitados por el superadmin (de /api/me)
+let motorOcrElegido = localStorage.getItem("selega.motorOcr") || ""; // elección del agente ("" = automático)
+let escaneadoActual = false;  // ¿el PDF cargado es escaneado? (para recomendar OCR vs texto)
 let paginasTexto = [];        // texto nativo del PDF con posiciones (cache para la lectura por región)
+
+// Motores OCR que el agente PUEDE elegir: intersección registro ∩ habilitados ∩ disponible().
+// (El registro es la fuente de la metadata: etiqueta/cuando/dispositivo/peso.) Ordenados por
+// tier→pref para que el primero sea el "recomendado por defecto" cuando no se trata de escaneado.
+function motoresOcrElegibles() {
+  const hab = new Set(motoresOcrHab);
+  return [...recon.registro.values()]
+    .filter((m) => hab.has(m.id) && m.modos.includes("region") && m.disponible())
+    .sort((a, b) => (a.tier - b.tier) || ((a.pref ?? 50) - (b.pref ?? 50)));
+}
+// Id que de hecho se usará en el OCR de región: la elección del agente si sigue habilitada/disponible;
+// si no, el de mejor pref habilitado (que recon también elegiría). "" si no hay ninguno.
+function motorOcrEfectivo() {
+  const elegibles = motoresOcrElegibles();
+  if (motorOcrElegido && elegibles.some((m) => m.id === motorOcrElegido)) return motorOcrElegido;
+  return elegibles[0]?.id || "";
+}
+
+// Icono de dispositivo (SVG, la app no usa emojis): candado = corre en el navegador (el dato
+// no sale); servidor = procesa en el server. Acompaña la guía de cada motor en el selector.
+const ICO_DISPOSITIVO = {
+  navegador: `<svg viewBox="0 0 20 20" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="5" y="9" width="10" height="7" rx="1.5"/><path d="M7 9V6.5a3 3 0 016 0V9"/></svg>`,
+  server: `<svg viewBox="0 0 20 20" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3.5" width="14" height="5" rx="1.2"/><rect x="3" y="11.5" width="14" height="5" rx="1.2"/></svg>`,
+};
+const dispoLabel = (d) => (d === "server" ? "servidor" : "navegador");
+
+// Cuál motor recomendar: si el PDF cargado es escaneado, el de mejor pref habilitado (artillería
+// OCR); si es digital o no hay PDF, igualmente el de mejor pref (texto nativo ya lo cubre aparte).
+function motorOcrRecomendado() { return motoresOcrElegibles()[0]?.id || ""; }
+
+// Pinta el selector "Motor OCR" del agente con los motores HABILITADOS + la guía bajo cada uno.
+// Marca "Recomendado" el sugerido según digital/escaneado. "" = Automático (que recon elija).
+function pintarSelectorOcr() {
+  const sel = document.querySelector("#cfg-motor-ocr");
+  const guia = document.querySelector("#cfg-ocr-guia");
+  if (!sel) return;
+  const elegibles = motoresOcrElegibles();
+  const reco = motorOcrRecomendado();
+  if (!elegibles.length) {
+    sel.innerHTML = `<option value="">(sin motores OCR habilitados)</option>`;
+    sel.disabled = true;
+    if (guia) guia.textContent = "El superadmin no habilitó ningún motor OCR. Se usa el texto nativo del PDF.";
+    return;
+  }
+  sel.disabled = false;
+  sel.innerHTML = `<option value="">Automático (el sistema elige el mejor)</option>` +
+    elegibles.map((m) => `<option value="${esc(m.id)}"${motorOcrElegido === m.id ? " selected" : ""}>${esc(m.etiqueta || m.id)}${m.id === reco ? " — Recomendado" : ""}</option>`).join("");
+  sel.value = motorOcrElegido && elegibles.some((m) => m.id === motorOcrElegido) ? motorOcrElegido : "";
+  pintarGuiaOcr();
+}
+// Guía del motor actualmente seleccionado (o del efectivo si está en Automático).
+function pintarGuiaOcr() {
+  const guia = document.querySelector("#cfg-ocr-guia");
+  if (!guia) return;
+  const id = motorOcrElegido || motorOcrEfectivo();
+  const m = [...recon.registro.values()].find((x) => x.id === id);
+  if (!m) { guia.textContent = "Automático: el sistema usa el mejor motor habilitado para cada caso."; return; }
+  const auto = motorOcrElegido ? "" : `<span class="cfg-ocr-auto">Automático → </span>`;
+  guia.innerHTML = `${auto}${esc(m.cuando || "")} · <span class="cfg-ocr-disp" title="${dispoLabel(m.dispositivo)}">${ICO_DISPOSITIVO[m.dispositivo] || ""} ${esc(dispoLabel(m.dispositivo))}</span> · ${esc(m.peso || "")}`;
+}
+
+// Badge de auto-recomendación al cargar un PDF: digital → texto del PDF (instantáneo);
+// escaneado → conviene OCR, nombrando el motor elegido/recomendado. Respeta motorRegion del
+// superadmin (si forzó "texto", no recomendamos OCR; si forzó "ocr", no hablamos de texto).
+function recomendarLectura(esNativo) {
+  const el = document.querySelector("#hint-region");
+  if (!el) return;
+  if (esNativo && motorRegion !== "ocr") {
+    el.textContent = "PDF digital → Texto del PDF (instantáneo)";
+    return;
+  }
+  const id = motorOcrEfectivo();
+  const m = [...recon.registro.values()].find((x) => x.id === id);
+  const nombre = m ? (m.etiqueta || m.id) : "OCR";
+  el.textContent = esNativo
+    ? `PDF digital · lectura por OCR (motor: ${nombre})`   // superadmin forzó OCR aunque sea digital
+    : `Escaneado → conviene OCR (motor: ${nombre})`;
+}
 
 // Barra de progreso compartida (render del PDF, OCR…). frac=null la oculta.
 function progreso(frac, texto = "", eta = "") {
@@ -591,6 +673,8 @@ async function init() {
   requiereRevision = !!usuario.requiere_revision; // flag del Consejo (Admin)
   jurisHabilitadas = Array.isArray(usuario.jurisdicciones) ? usuario.jurisdicciones : []; // [] = todas (superadmin scopea)
   motorRegion = usuario.motor_region || "auto"; // motor de lectura por región (lo fija el superadmin)
+  motoresOcrHab = Array.isArray(usuario.motores_ocr) ? usuario.motores_ocr : []; // motores OCR habilitados (superadmin)
+  setIaDisponible(!!usuario.ia_disponible);     // habilita el motor t4-ollama (VLM server) si la IA está prendida
   // Firma digital (Trustux): solo si el superadmin la habilitó (cap_firma). Muestra el bloque y cablea el panel.
   if (usuario.firma_disponible) {
     const bf = $("#bq-firma"); if (bf) bf.hidden = false;
@@ -689,6 +773,19 @@ async function init() {
   $("#fmt-decimal").value = formato.decimal;
   $("#fmt-neg").value = formato.negativo;
   $("#btn-formato").onclick = () => $("#cfg-formato").classList.toggle("hidden");
+
+  // ---- Configuración del agente: Motor OCR (lectura por región) ----
+  pintarSelectorOcr();
+  $("#btn-config").onclick = () => {
+    mostrarControl();                          // la config vive en la vista de control
+    pintarSelectorOcr();                       // refresca por si cambió la disponibilidad
+    $("#cfg-ocr").classList.toggle("hidden");
+  };
+  $("#cfg-motor-ocr").addEventListener("change", (e) => {
+    motorOcrElegido = e.target.value || "";
+    try { localStorage.setItem("selega.motorOcr", motorOcrElegido); } catch { /* sin storage */ }
+    pintarGuiaOcr();
+  });
   const aplicarFormato = () => {
     const miles = $("#fmt-miles").value, decimal = $("#fmt-decimal").value;
     if (miles && miles === decimal) {           // miles y decimal no pueden coincidir
@@ -723,7 +820,12 @@ async function init() {
           // Preprocesado del recorte (upscale+gris+contraste): los separadores chiquitos
           // del escaneado se vuelven nítidos. Ayuda a Paddle (preferido) y a Tesseract.
           const limpio = preprocesarParaOCR(crop);
-          const r = await recon.reconocer("region", { canvas: limpio });
+          // forzarId = la elección del agente si sigue habilitada/disponible; si no, recon elige
+          // el de mejor pref habilitado. El VLM server (t4) recibe el recorte SIN preprocesar
+          // (un modelo de visión prefiere la imagen original; el preproceso es para OCR clásico).
+          const forzarId = motorOcrEfectivo();
+          const canvasOCR = forzarId === "t4-ollama" ? crop : limpio;
+          const r = await recon.reconocer("region", { canvas: canvasOCR }, forzarId ? { forzarId } : {});
           n = extraerNumero(r.texto, formato); conf = r.confianza ?? 0; via = "OCR";
         }
         if (n == null) {
@@ -878,6 +980,9 @@ async function init() {
       const pags = await pv.textoNativoConPos();
       paginasTexto = pags;            // cache para la lectura por región (texto nativo, sin re-extraer)
       const esNativo = pags.some((p) => p.items.length > 5);
+      escaneadoActual = !esNativo;    // recordatorio para recomendar OCR vs texto en el selector
+      pintarSelectorOcr();            // re-marca "Recomendado" según digital/escaneado
+      recomendarLectura(esNativo);    // badge guía en #hint-region (digital → texto; escaneado → OCR)
       if (esNativo) {
         // Nativo: extracción por anclas on-prem (probada). Si no puede, NO es fatal.
         progreso(0.97, "Extrayendo cifras del balance…");

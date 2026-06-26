@@ -5,6 +5,15 @@
 import { esc } from "./util.js";
 import { aviso, confirmar } from "./modal.js";
 import { cargarRegistro } from "./rules/loader.js";
+import { registro as reconRegistro } from "./recon/index.js";
+
+// Indicador de dispositivo: SVG (la app no usa emojis). Candado = corre en el navegador del
+// agente (el dato no sale); servidor = procesa en el server. Texto accesible vía <title>.
+const ICO_DISPOSITIVO = {
+  navegador: `<svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="9" width="10" height="7" rx="1.5"/><path d="M7 9V6.5a3 3 0 016 0V9"/></svg>`,
+  server: `<svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3.5" width="14" height="5" rx="1.2"/><rect x="3" y="11.5" width="14" height="5" rx="1.2"/><circle cx="6" cy="6" r=".7" fill="currentColor"/><circle cx="6" cy="14" r=".7" fill="currentColor"/></svg>`,
+};
+const labelDispositivo = (d) => (d === "server" ? "en el servidor" : "en el navegador (no sale)");
 
 const ROUTINGS = [
   ["local-first", "Local primero, nube si falla"],
@@ -14,9 +23,25 @@ const ROUTINGS = [
 ];
 
 export async function montarSuper(cont, registro, onChange) {
-  let cfg = { jurisdicciones: [], cap_vlm_local: false, ollama_url: "", ollama_model: "", ollama_keep: "demanda", ia_routing: "local-first", cap_ocr: true, data_collection_deny: true, cap_firma: false, cap_firma_ocsp: false, motor_region: "auto" };
+  let cfg = { jurisdicciones: [], cap_vlm_local: false, ollama_url: "", ollama_model: "", ollama_keep: "demanda", ia_routing: "local-first", cap_ocr: true, data_collection_deny: true, cap_firma: false, cap_firma_ocsp: false, motor_region: "auto", motores_ocr: ["t2-paddleocr", "t1-tesseract", "t3-ocrs"] };
   try { cfg = { ...cfg, ...(await (await fetch("/api/super/config")).json()) }; } catch { /* defaults */ }
   const jurSet = new Set(cfg.jurisdicciones || []);
+  const ocrSet = new Set(cfg.motores_ocr || []);
+
+  // Motores OCR del REGISTRO (la nave): un checkbox por motor con su guía. El superadmin
+  // tilda los que el agente puede elegir. Texto nativo/Tesseract base no se listan acá: este
+  // set es el de motores OCR enchufables (todos los Recognizer del registro de la nave).
+  const motoresOcr = [...reconRegistro.values()];
+  const filaMotorOcr = (m) => `
+    <label class="sup-ocr-row" title="${esc(m.cuando || "")}">
+      <input type="checkbox" class="sup-ocr-chk" value="${esc(m.id)}" ${ocrSet.has(m.id) ? "checked" : ""}>
+      <span class="sup-ocr-info">
+        <span class="sup-ocr-tit">${esc(m.etiqueta || m.id)}
+          <span class="sup-ocr-disp" title="${esc(labelDispositivo(m.dispositivo))}">${ICO_DISPOSITIVO[m.dispositivo] || ""} ${esc(m.dispositivo || "")}</span>
+          <span class="sup-ocr-peso">${esc(m.peso || "")}</span></span>
+        <span class="sup-ocr-cuando">${esc(m.cuando || "")}</span>
+      </span>
+    </label>`;
 
   cont.innerHTML = `
     <div class="adm">
@@ -64,6 +89,13 @@ export async function montarSuper(cont, registro, onChange) {
           </div>
 
           <div class="sup-motor">
+            <div class="sup-motor-h"><strong>Motores OCR disponibles</strong><span class="sup-badge" id="sup-ocr-badge">${ocrSet.size}</span></div>
+            <p class="adm-hint">Tildá los motores OCR que el agente puede elegir para leer una región (en Configuración del agente). El de mejor preferencia habilitado se usa por defecto. Los apagados quedan ocultos para el agente.</p>
+            <div class="sup-ocr-list">${motoresOcr.map(filaMotorOcr).join("")}</div>
+            <div class="adm-acciones"><button id="sup-ocr-save">Guardar motores OCR</button></div>
+          </div>
+
+          <div class="sup-motor">
             <div class="sup-motor-h"><strong>Tanque local (Ollama)</strong><span class="sup-badge" id="sup-local-badge">…</span></div>
             <p class="adm-hint">Modelo de visión local en CPU (Gemma/Qwen-VL). Para escaneados y formatos nuevos, sin que el balance salga del server. Gratis: es la escalada (Nivel 2).</p>
             <div class="adm-grid">
@@ -90,6 +122,12 @@ export async function montarSuper(cont, registro, onChange) {
               </select>
             </div>
             <p class="adm-hint">Por defecto Selega exige proveedores que NO conservan el prompt (los EECC son datos de terceros). Cambialo solo si sabés a qué modelo va.</p>
+          </div>
+
+          <div class="sup-motor">
+            <div class="sup-motor-h"><strong>Sidecar de extracción (Python)</strong><span class="sup-badge" id="sup-sidecar-badge">…</span></div>
+            <p class="adm-hint">Microservicio Python opcional para extracción digital potente (texto + posiciones + tablas) de PDFs grandes/complejos. Se configura con la variable de entorno <code>EXTRACTOR_URL</code> (infra, no desde acá). Apagado = se usa la extracción nativa de siempre. El PDF va al server local, no a la nube.</p>
+            <p class="adm-hint" id="sup-sidecar-msg">—</p>
           </div>
 
           <div class="adm-grid">
@@ -166,6 +204,15 @@ export async function montarSuper(cont, registro, onChange) {
         if (fch) { fch.textContent = m.firma.enabled ? "activada" : "apagada"; fch.className = "bq-chip " + (m.firma.enabled ? "ok" : "neutral"); }
         const fr = cont.querySelector("#sup-firma-roots");
         if (fr) fr.textContent = m.firma.roots != null ? `${m.firma.roots} raíz(es) de confianza cargada(s).` : "";
+      }
+      // estado del sidecar de extracción (configurado vía EXTRACTOR_URL; sólo lectura acá)
+      if (m.sidecar) {
+        const sb = cont.querySelector("#sup-sidecar-badge");
+        if (sb) badge(sb, m.sidecar.available, m.sidecar.configured ? (m.sidecar.available ? "conectado" : "no responde") : "apagado");
+        const sm = cont.querySelector("#sup-sidecar-msg");
+        if (sm) sm.textContent = m.sidecar.configured
+          ? (m.sidecar.available ? (m.sidecar.detalle || "Conectado.") : "Configurado pero no responde — revisá EXTRACTOR_URL.")
+          : "No configurado (EXTRACTOR_URL vacía). Se usa la extracción nativa.";
       }
       // poblar modelos disponibles en Ollama
       const sel = cont.querySelector("#sup-ollama-model");
@@ -249,6 +296,18 @@ export async function montarSuper(cont, registro, onChange) {
       cont.querySelector("#sup-nj-id").value = ""; cont.querySelector("#sup-nj-prov").value = ""; cont.querySelector("#sup-nj-cons").value = "";
       await recargarEntes();
     } catch (e) { aviso("No se pudo agregar", e.message); }
+  };
+
+  // ---- Motores OCR disponibles: tildar los que el agente puede elegir ----
+  cont.querySelector("#sup-ocr-save").onclick = async () => {
+    const ids = [...cont.querySelectorAll(".sup-ocr-chk:checked")].map((c) => c.value);
+    try {
+      const r = await fetch("/api/super/config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ motores_ocr: ids }) });
+      if (!r.ok) throw new Error(`Error ${r.status}`);
+      ocrSet.clear(); ids.forEach((i) => ocrSet.add(i));
+      cont.querySelector("#sup-ocr-badge").textContent = ids.length;
+      await aviso("Motores OCR guardados", "Los agentes verán los motores habilitados en su Configuración (al volver a entrar).");
+    } catch (e) { aviso("No se pudo guardar", e.message); }
   };
 
   cont.querySelector("#sup-save").onclick = async () => {

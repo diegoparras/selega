@@ -1,0 +1,38 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const __wbg_detectedline_free: (a: number, b: number) => void;
+export const __wbg_image_free: (a: number, b: number) => void;
+export const __wbg_ocrengine_free: (a: number, b: number) => void;
+export const __wbg_ocrengineinit_free: (a: number, b: number) => void;
+export const __wbg_rotatedrect_free: (a: number, b: number) => void;
+export const __wbg_textline_free: (a: number, b: number) => void;
+export const __wbg_textword_free: (a: number, b: number) => void;
+export const detectedline_rotatedRect: (a: number) => number;
+export const detectedline_words: (a: number) => [number, number];
+export const image_channels: (a: number) => number;
+export const image_data: (a: number) => [number, number];
+export const image_height: (a: number) => number;
+export const image_width: (a: number) => number;
+export const ocrengine_detectText: (a: number, b: number) => [number, number, number, number];
+export const ocrengine_getText: (a: number, b: number) => [number, number, number, number];
+export const ocrengine_getTextLines: (a: number, b: number) => [number, number, number, number];
+export const ocrengine_loadImage: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+export const ocrengine_new: (a: number) => [number, number, number];
+export const ocrengine_recognizeText: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const ocrengineinit_new: () => number;
+export const ocrengineinit_setDetectionModel: (a: number, b: number, c: number) => [number, number];
+export const ocrengineinit_setRecognitionModel: (a: number, b: number, c: number) => [number, number];
+export const rotatedrect_boundingRect: (a: number) => [number, number];
+export const rotatedrect_corners: (a: number) => [number, number];
+export const textline_text: (a: number) => [number, number];
+export const textline_words: (a: number) => [number, number];
+export const textword_rotatedRect: (a: number) => number;
+export const textword_text: (a: number) => [number, number];
+export const __wbindgen_export_0: WebAssembly.Table;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __externref_drop_slice: (a: number, b: number) => void;
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __externref_table_dealloc: (a: number) => void;
+export const __externref_table_alloc: () => number;
+export const __wbindgen_start: () => void;

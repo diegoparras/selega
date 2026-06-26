@@ -422,6 +422,27 @@ button.mini { padding: 3px 9px; font-size: 13px; line-height: 1.2; }
 .cfg-formato label { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
 .fmt-warn { font-size: 12px; color: var(--bad); }
 
+/* Configuración del agente: selector de Motor OCR + su guía bajo la opción */
+#cfg-ocr { flex-direction: column; align-items: stretch; gap: 8px; }
+.cfg-ocr-sel { flex-direction: column; align-items: flex-start; gap: 5px; }
+.cfg-ocr-sel select { min-width: 280px; max-width: 100%; }
+#cfg-ocr-guia { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cfg-ocr-disp { display: inline-flex; gap: 4px; align-items: center; }
+.cfg-ocr-disp svg { vertical-align: middle; }
+.cfg-ocr-auto { color: var(--muted); }
+
+/* Superadmin: lista de motores OCR disponibles (checkbox + guía por motor) */
+.sup-ocr-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.sup-ocr-row { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 8px 10px;
+  background: var(--card-2); border: 1px solid var(--line); border-radius: 8px; }
+.sup-ocr-row input { margin-top: 3px; flex: 0 0 auto; }
+.sup-ocr-info { display: flex; flex-direction: column; gap: 2px; }
+.sup-ocr-tit { font-size: 13px; font-weight: 600; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sup-ocr-disp { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; font-weight: 500; color: var(--muted); }
+.sup-ocr-disp svg { vertical-align: middle; }
+.sup-ocr-peso { font-size: 11px; font-weight: 500; color: var(--muted); }
+.sup-ocr-cuando { font-size: 12px; color: var(--muted); }
+
 /* Slicer horizontal de páginas: tira de botones para saltar de página */
 
 /* Barra de progreso del OCR (para que no parezca colgado) */

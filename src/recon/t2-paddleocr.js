@@ -139,6 +139,9 @@ export const motorPaddle = {
   pref: 10,                // preferido en región (menor = primero) — gana a Tesseract (pref 20)
   etiqueta: "OCR PaddleOCR PP-OCRv5 (local)",
   modos: ["region"],       // sólo región (rec sin detección). Página entera → Tesseract.
+  dispositivo: "navegador",
+  cuando: "escaneados: el mejor en números/separadores",
+  peso: "~41 MB",          // runtime ONNX + modelo rec (lazy)
   disponible: () => hayWasm,
   proveedor: () => providerUsado, // info: "webgpu" | "wasm" (tras el primer uso)
   async reconocer({ canvas, onProgress }) {

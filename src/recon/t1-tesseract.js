@@ -56,6 +56,9 @@ export const motorTesseract = {
   pref: 20,            // fallback de región (Paddle pref 10 va primero) y único motor de página entera
   etiqueta: "OCR Tesseract (local)",
   modos: ["region", "canvas"],
+  dispositivo: "navegador",
+  cuando: "escaneo limpio y simple; liviano",
+  peso: "~12 MB",          // .wasm + traineddata español (lazy)
   disponible: () => true, // client-side siempre; el .env del server gobierna los tiers pesados
   async reconocer({ canvas, onProgress }) {
     const { texto, confianza } = await ocrCanvas(canvas, onProgress);

@@ -7,6 +7,7 @@ import { verifyPassword, signSession, verifySession } from "./auth.js";
 import { extraerDePDF } from "./extraer.js";
 import { verificarFirma, trustRootsInfo } from "./firma/index.js";
 import { createLockatus, pkce, randomId } from "./lockatus.js";
+import { extraerConSidecar, sidecarDisponible } from "./extractor-client.js";
 
 // Cliente OIDC hacia Lockatus (solo modo federado; construcción perezosa, una vez).
 let _lk = null;
@@ -17,7 +18,13 @@ const lk = () => (_lk ||= createLockatus(config.lockatus));
 const ROLES = ["agente", "supervisor", "auditor", "admin", "superadmin"];
 
 // Defaults de la capa de motores (se sobrescriben desde config por el superadmin).
-const CAP_DEFAULTS = { cap_ocr: "1", cap_vlm_local: "0", cap_firma: "0", cap_firma_ocsp: "0", ollama_url: "http://host.docker.internal:11434", ollama_model: "qwen2.5vl:3b", ia_routing: "local-first", ollama_keep: "demanda", data_collection_deny: config.dataCollectionDeny, motor_region: "auto" };
+// motores_ocr: set de ids de motores OCR HABILITADOS para el agente (JSON array). Default:
+// Paddle + Tesseract + ocrs prendidos; Ollama (t4) y TrOCR (t5) quedan disponibles en el
+// registro pero NO en el default (los prende el superadmin a propósito).
+const MOTORES_OCR_DEFAULT = ["t2-paddleocr", "t1-tesseract", "t3-ocrs"];
+const CAP_DEFAULTS = { cap_ocr: "1", cap_vlm_local: "0", cap_firma: "0", cap_firma_ocsp: "0", ollama_url: "http://host.docker.internal:11434", ollama_model: "qwen2.5vl:3b", ia_routing: "local-first", ollama_keep: "demanda", data_collection_deny: config.dataCollectionDeny, motor_region: "auto", motores_ocr: JSON.stringify(MOTORES_OCR_DEFAULT) };
+// Ids de motores OCR conocidos (whitelist para la validación del PUT del superadmin).
+const MOTORES_OCR_IDS = ["t1-tesseract", "t2-paddleocr", "t3-ocrs", "t4-ollama", "t5-vlm"];
 // Motor de lectura por región (lo elige el superadmin): auto = texto nativo y, si no hay, OCR;
 // texto = solo la capa de texto del PDF (digital, exacto e instantáneo); ocr = solo Tesseract (escaneados).
 const MOTORES_REGION = ["auto", "texto", "ocr"];
@@ -82,6 +89,15 @@ async function jurisHabilitadas() {
   try { const j = JSON.parse(await repo.getConfig("jurisdicciones", "[]")); return Array.isArray(j) ? j : []; }
   catch { return []; }
 }
+// Set de motores OCR habilitados (ids). Sanea contra la whitelist; si la config está rota o
+// queda vacía, cae al default (nunca deja al agente sin motores que elegir).
+async function motoresOcrHabilitados() {
+  try {
+    const v = JSON.parse(await repo.getConfig("motores_ocr", CAP_DEFAULTS.motores_ocr));
+    const set = Array.isArray(v) ? v.filter((id) => MOTORES_OCR_IDS.includes(id)) : [];
+    return set.length ? set : MOTORES_OCR_DEFAULT;
+  } catch { return MOTORES_OCR_DEFAULT; }
+}
 // Sonda del tanque local: ¿responde Ollama? ¿qué modelos tiene? (enabled ≠ available)
 async function probarOllama(url) {
   try {
@@ -138,6 +154,7 @@ export async function handle(req, res, path) {
       jurisdicciones: await jurisHabilitadas(),   // [] = todas (el superadmin scopea el install)
       ia_disponible: cloudOn || localOn,
       motor_region: await cap("motor_region"),   // motor de lectura por región (lo fija el superadmin)
+      motores_ocr: await motoresOcrHabilitados(),   // set de motores OCR que el agente puede elegir
       firma_disponible: (await cap("cap_firma")) === "1" });   // verificación de firma (gateada por superadmin)
   }
 
@@ -202,6 +219,25 @@ export async function handle(req, res, path) {
       return json(res, 200, { cifras: await extraerDePDF(buf) });
     } catch (e) {
       return json(res, 500, { error: "No se pudo leer el PDF: " + e.message });
+    }
+  }
+
+  // ---- extracción por SIDECAR Python (digital potente: texto + items con pos + tablas). ----
+  // OFF por defecto: si EXTRACTOR_URL no está, extraerConSidecar() devuelve null → 503 (feature
+  // apagada). Engines: pymupdf|pdfplumber|pdfminer|pypdf. ?tablas=1 pide extracción de tablas.
+  // Devuelve el JSON crudo del sidecar (el cliente decide qué usar). No toca el camino probado.
+  if (path === "/api/extraer/sidecar" && m === "POST") {
+    try {
+      const u = new URL(req.url, "http://x");
+      const engine = u.searchParams.get("engine") || "pymupdf";
+      const tablas = /^(1|true)$/i.test(u.searchParams.get("tablas") || "");
+      const buf = await readRaw(req, 30e6);
+      if (!buf.length) return json(res, 400, { error: "PDF vacío" });
+      const out = await extraerConSidecar(buf, { engine, tablas });
+      if (out == null) return json(res, 503, { error: "Sidecar de extracción no configurado (EXTRACTOR_URL)" });
+      return json(res, 200, out);
+    } catch (e) {
+      return json(res, 502, { error: "Sidecar: " + e.message });
     }
   }
 
@@ -392,12 +428,15 @@ export async function handle(req, res, path) {
       const url = await cap("ollama_url");
       const probe = await probarOllama(url); // siempre sondea (para ver si Ollama está aunque el tier esté off)
       const cloudKey = !!(config.openrouterKeyEnv || await repo.getConfig("openrouter_key"));
+      const sidecar = await sidecarDisponible().catch(() => null); // null = no configurado/no responde
       return json(res, 200, {
         ocr: { enabled: (await cap("cap_ocr")) === "1", available: true, detalle: "Tesseract (en el navegador)" },
         local: { enabled: (await cap("cap_vlm_local")) === "1", available: probe.up, url,
           model: await cap("ollama_model"), modelos: probe.modelos, error: probe.error || null },
         nube: { enabled: (await repo.getConfig("llm_enabled", "0")) === "1", available: cloudKey, key_set: cloudKey },
         firma: { enabled: (await cap("cap_firma")) === "1", available: true, roots: trustRootsInfo().length },
+        // Sidecar Python (extracción digital potente): configurado vía EXTRACTOR_URL (infra, no DB).
+        sidecar: { configured: !!process.env.EXTRACTOR_URL, available: !!sidecar, detalle: sidecar?.engines ? `engines: ${(sidecar.engines || []).join(", ")}` : null },
         routing: await cap("ia_routing"),
       });
     }
@@ -408,6 +447,7 @@ export async function handle(req, res, path) {
         ollama_url: await cap("ollama_url"), ollama_model: await cap("ollama_model"), ollama_keep: await cap("ollama_keep"),
         ia_routing: await cap("ia_routing"), data_collection_deny: (await cap("data_collection_deny")) === "1",
         motor_region: await cap("motor_region"),
+        motores_ocr: await motoresOcrHabilitados(),
         jurisdicciones: await jurisHabilitadas(),
       });
     }
@@ -422,6 +462,11 @@ export async function handle(req, res, path) {
       if (b.ollama_keep) await repo.setConfig("ollama_keep", String(b.ollama_keep));
       if (b.ia_routing) await repo.setConfig("ia_routing", String(b.ia_routing));
       if (b.motor_region && MOTORES_REGION.includes(String(b.motor_region))) await repo.setConfig("motor_region", String(b.motor_region));
+      if (Array.isArray(b.motores_ocr)) {
+        // Saneamos contra la whitelist; vacío → default (nunca dejar al agente sin motores).
+        const set = b.motores_ocr.filter((id) => MOTORES_OCR_IDS.includes(String(id)));
+        await repo.setConfig("motores_ocr", JSON.stringify(set.length ? set : MOTORES_OCR_DEFAULT));
+      }
       if (b.data_collection_deny != null) await repo.setConfig("data_collection_deny", b.data_collection_deny ? "1" : "0");
       if (Array.isArray(b.jurisdicciones)) await repo.setConfig("jurisdicciones", JSON.stringify(b.jurisdicciones));
       await repo.auditar(user.email, null, "super_config", "");

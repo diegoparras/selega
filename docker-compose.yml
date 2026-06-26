@@ -35,6 +35,20 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    # Para activar el sidecar de extracción Python, descomentá esta línea (red interna):
+    #   environment:
+    #     EXTRACTOR_URL: "http://extractor:8099"
+    # Sin EXTRACTOR_URL, Selega ignora el sidecar (feature OFF).
+
+  # Sidecar Python (FastAPI) de extracción de PDFs digitales: texto + items con
+  # posición + tablas (PyMuPDF/pdfplumber/pdfminer.six/pypdf). El PDF lo manda el
+  # server LOCAL de Selega; NO hay puerto público (solo la red interna del compose).
+  extractor:
+    build: ./extractor
+    container_name: selega-extractor
+    expose:
+      - "8099"            # alcanzable por el servicio `selega`, NO publicado al host
+    restart: unless-stopped
 
 volumes:
   selega-pg:

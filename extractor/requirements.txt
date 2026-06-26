@@ -1,0 +1,10 @@
+# Sidecar de extracción de PDFs digitales (texto + tablas). Pin por rango mayor
+# para builds reproducibles sin congelar parches de seguridad.
+# Engines de extracción:
+pymupdf>=1.24,<2          # fitz: texto rápido + items con posición (DEFAULT)
+pdfplumber>=0.11,<0.12    # words con bbox + tablas (extract_tables)
+pdfminer.six>=20240706    # layout fino (LTTextLine) para casos difíciles
+pypdf>=4.2,<6             # texto simple, sin coords
+# Servidor HTTP:
+fastapi>=0.111,<1
+uvicorn[standard]>=0.30,<1
