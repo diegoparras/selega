@@ -808,37 +808,21 @@ async function init() {
       const destino = defs.find((c) => c.id === campoObjetivo);
       hint(`Leyendo región para "${destino.label}"…`);
       try {
-        let n = null, via = "", conf = 1;
-        // 1) Texto NATIVO del PDF (instantáneo y EXACTO: respeta puntos y comas) — salvo que el
-        //    superadmin fuerce OCR. Para PDFs digitales (la mayoría) esto reemplaza al OCR lento.
-        if (motorRegion !== "ocr") {
-          n = extraerNumero(textoEnRegion(paginasTexto, meta.pagina, meta.rect0), formato);
-          if (n != null) via = "texto del PDF";
-        }
-        // 2) OCR Tesseract: si se forzó OCR, o el texto nativo no dio número (región escaneada).
-        if (n == null && motorRegion !== "texto") {
-          // Preprocesado del recorte (upscale+gris+contraste): los separadores chiquitos
-          // del escaneado se vuelven nítidos. Ayuda a Paddle (preferido) y a Tesseract.
-          const limpio = preprocesarParaOCR(crop);
-          // forzarId = la elección del agente si sigue habilitada/disponible; si no, recon elige
-          // el de mejor pref habilitado. El VLM server (t4) recibe el recorte SIN preprocesar
-          // (un modelo de visión prefiere la imagen original; el preproceso es para OCR clásico).
-          const forzarId = motorOcrEfectivo();
-          const canvasOCR = forzarId === "t4-ollama" ? crop : limpio;
-          const r = await recon.reconocer("region", { canvas: canvasOCR }, forzarId ? { forzarId } : {});
-          n = extraerNumero(r.texto, formato); conf = r.confianza ?? 0; via = "OCR";
-        }
-        if (n == null) {
-          hint(motorRegion === "texto"
-            ? "Sin texto nativo en la región (¿escaneado? el superadmin puede poner el motor en OCR/Auto)."
-            : "No se leyó un número. Reintentá marcando mejor la cifra.");
-          return;
-        }
+        // OCR del RECORTE marcado: es pixel-perfecto a lo que dibujás, así la lectura NUNCA se corre.
+        // (El texto nativo por coordenadas se usa en la carga automática —anclas/plantillas—, NO acá:
+        //  mapear el recuadro del overlay al espacio del texto nativo no era confiable y leía filas
+        //  corridas. El recorte del canvas, en cambio, es exactamente lo que el usuario marcó.)
+        const forzarId = motorOcrEfectivo();
+        // El VLM server (t4) recibe el recorte original; los OCR clásicos, el preprocesado
+        // (upscale+gris+contraste) que vuelve nítidos los separadores chicos.
+        const canvasOCR = forzarId === "t4-ollama" ? crop : preprocesarParaOCR(crop);
+        const r = await recon.reconocer("region", { canvas: canvasOCR }, forzarId ? { forzarId } : {});
+        const n = extraerNumero(r.texto, formato);
+        if (n == null) { hint(`No se leyó un número (“${(r.texto || "").trim().slice(0, 24)}”). Reintentá marcando mejor la cifra.`); return; }
         cifras[campoObjetivo] = n;
         provenance[campoObjetivo] = { pagina: meta.pagina, rect: meta.rect0 }; // marco sin rotar
         pintarCifras(); recomputar(); marcarProvenance();
-        const detalle = via === "OCR" ? `OCR ${Math.round(conf * 100)}%` : via;
-        hint(`✓ ${destino.label} = ${fmt(n)}  ·  ${detalle} (p.${meta.pagina})`);
+        hint(`✓ ${destino.label} = ${fmt(n)}  ·  ${r.motor || "OCR"} ${Math.round((r.confianza ?? 0) * 100)}% (p.${meta.pagina})`);
       } catch (err) {
         hint("Lectura falló: " + err.message);
       } finally {
