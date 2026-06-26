@@ -16,7 +16,8 @@ const MIME = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/jav
   ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml",
   ".ico": "image/x-icon", ".png": "image/png", ".wasm": "application/wasm",
   ".woff2": "font/woff2", ".woff": "font/woff", ".gz": "application/gzip",
-  ".traineddata": "application/octet-stream" };
+  ".traineddata": "application/octet-stream", ".onnx": "application/octet-stream",
+  ".ort": "application/octet-stream", ".txt": "text/plain; charset=utf-8" };
 const BLOQUEADO = (p) => p.startsWith("/server") || p.startsWith("/node_modules") ||
   p.endsWith(".db") || p.includes(".db-") || p === "/package.json" || p.startsWith("/test");
 

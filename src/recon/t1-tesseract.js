@@ -53,6 +53,7 @@ export async function ocrCanvas(canvas, onProgress) {
 export const motorTesseract = {
   id: "t1-tesseract",
   tier: 1,
+  pref: 20,            // fallback de región (Paddle pref 10 va primero) y único motor de página entera
   etiqueta: "OCR Tesseract (local)",
   modos: ["region", "canvas"],
   disponible: () => true, // client-side siempre; el .env del server gobierna los tiers pesados

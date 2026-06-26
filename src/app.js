@@ -11,6 +11,7 @@ import { esc, eyeify } from "./util.js";
 import { me, login, logout } from "./session.js";
 import { PdfView } from "./pdf-view.js";
 import * as recon from "./recon/index.js";
+import { preprocesarParaOCR } from "./recon/preproceso.js";
 import { cargarFormato, guardarFormato, parseMonto as parseMontoF, extraerNumero, formatear } from "./core/formato.js";
 import { fingerprint, mejorPlantilla } from "./core/plantillas.js";
 import { aviso, confirmar, pedir } from "./modal.js";
@@ -719,7 +720,10 @@ async function init() {
         }
         // 2) OCR Tesseract: si se forzó OCR, o el texto nativo no dio número (región escaneada).
         if (n == null && motorRegion !== "texto") {
-          const r = await recon.reconocer("region", { canvas: crop });
+          // Preprocesado del recorte (upscale+gris+contraste): los separadores chiquitos
+          // del escaneado se vuelven nítidos. Ayuda a Paddle (preferido) y a Tesseract.
+          const limpio = preprocesarParaOCR(crop);
+          const r = await recon.reconocer("region", { canvas: limpio });
           n = extraerNumero(r.texto, formato); conf = r.confianza ?? 0; via = "OCR";
         }
         if (n == null) {

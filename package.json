@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server/index.js",
     "serve": "node server/index.js",
-    "test": "node test/test-core.mjs && node test/test-motor.mjs && node test/test-firma.mjs"
+    "test": "node test/test-core.mjs && node test/test-motor.mjs && node test/test-firma.mjs",
+    "test:ocr": "node test/test-paddleocr.mjs"
   },
   "dependencies": {
     "@peculiar/webcrypto": "^1.7.1",

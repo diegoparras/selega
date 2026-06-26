@@ -12,17 +12,21 @@
 // se enchufa después. Qué tiers están activos lo gobierna el .env del server (los
 // pesados) — acá exponemos sólo los client-side.
 
+import { motorPaddle } from "./t2-paddleocr.js";
 import { motorTesseract } from "./t1-tesseract.js";
 
 const registro = new Map();
 
 export function registrar(motor) { registro.set(motor.id, motor); }
 
-// Motores habilitados para un modo, del más barato (tier bajo) al más caro.
+// Motores habilitados para un modo, del más barato (tier bajo) al más caro. Desempate
+// dentro del mismo tier: el campo `pref` (menor = preferido) y, si empata, el orden de
+// registro. Así Paddle queda PRIMERO en OCR de región y Tesseract de fallback, sin
+// depender de la estabilidad implícita del sort.
 export function motores(modo) {
   return [...registro.values()]
     .filter((m) => m.disponible() && m.modos.includes(modo))
-    .sort((a, b) => a.tier - b.tier);
+    .sort((a, b) => (a.tier - b.tier) || ((a.pref ?? 50) - (b.pref ?? 50)));
 }
 
 // El router elige el motor más barato disponible para el modo (o uno forzado por id).
@@ -47,6 +51,9 @@ export async function reconocer(modo, entrada, { umbral = 0.6, forzarId } = {}) 
 
 // Motores client-side de Fase 1. T0 (texto nativo) lo maneja pdf-view directamente
 // sobre el doc pdf.js; acá registramos los que operan por canvas/región.
+// Paddle (rec PP-OCRv5) es el PREFERIDO en OCR de región (lee bien los separadores);
+// Tesseract queda de fallback en región y como único motor de página entera (canvas).
+registrar(motorPaddle);
 registrar(motorTesseract);
 
 export { registro };
