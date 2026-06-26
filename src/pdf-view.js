@@ -182,6 +182,29 @@ export class PdfView {
     });
   }
 
+  // Texto NATIVO dentro de un rect 0..1 del MARCO MOSTRADO (el mismo que usa el overlay de marcado
+  // y el recorte del canvas). Usa el viewport REAL con que se renderizó la página (scale + rotación,
+  // incluyendo la rotación intrínseca del PDF) → imposible que la lectura se corra de fila.
+  // Devuelve "" si la región no tiene texto (PDF escaneado → el llamador cae a OCR).
+  async textoEnRect(n, rect) {
+    if (!this.doc || !rect) return "";
+    const L = await lib();
+    const page = await this.doc.getPage(n);
+    const rot = ((this.rotaciones[n - 1] || 0) % 360 + 360) % 360;
+    const vp = page.getViewport({ scale: this.scale, rotation: rot }); // idéntico al render + overlay
+    const tc = await page.getTextContent();
+    const out = [];
+    for (const it of tc.items) {
+      if (!it.str || !it.str.trim()) continue;
+      const m = L.Util.transform(vp.transform, it.transform);
+      const h = Math.hypot(m[2], m[3]) || 10;
+      const cx = (m[4] + (it.width || 0) * vp.scale / 2) / vp.width;  // centro del glifo, normalizado
+      const cy = (m[5] - h / 2) / vp.height;
+      if (cx >= rect.x && cx <= rect.x + rect.w && cy >= rect.y && cy <= rect.y + rect.h) out.push(it.str);
+    }
+    return out.join(" ");
+  }
+
   // Texto NATIVO con posiciones por página (T0). items vacío = PDF escaneado (→ OCR).
   async textoNativoConPos() {
     if (!this.doc) return [];
