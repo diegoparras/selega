@@ -144,8 +144,8 @@ export async function exportarInforme(t, opts = {}) {
   const col = (c) => rgb01(c, rgb);
   // Sanea a WinAnsi (Helvetica/Courier no traen glifos fuera de Latin-1): em-dash→guion, etc.
   const wa = (s) => String(s ?? "")
-    .replace(/—|–/g, "-").replace(/[‘’]/g, "'")
-    .replace(/[“”]/g, '"').replace(/…/g, "...").replace(/ /g, " ");
+    .replace(/[‐-―−﹘﹣－]/g, "-").replace(/[‘’‚′]/g, "'")
+    .replace(/[“”]/g, '"').replace(/…/g, "...").replace(/[  -​  　﻿]/g, " ").replace(/[^\x20-\x7E -ÿ•€]/g, "?").replace(/ /g, " ");
   const W = (s, f, sz) => f.widthOfTextAtSize(wa(s), sz);
 
   // Salto de página si no entra `alto` desde el cursor. Devuelve true si saltó.

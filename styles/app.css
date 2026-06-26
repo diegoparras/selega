@@ -191,6 +191,9 @@ body:not(.con-pdf) .rail { flex: 1 1 auto; max-width: 680px; margin: 0 auto; } /
 .ver-motivos li { margin: 2px 0; }
 .ver-actions { display: flex; gap: 8px; margin: 12px 0 0 20px; }
 .ver-actions button { border-radius: 999px; padding: 8px 16px; font-size: 13px; }
+/* Se legaliza → el botón principal va en verde (un botón bordó "todo OK" confunde con alerta). */
+.veredicto.des-verde #btn-confirmar { background: var(--ok); border-color: var(--ok); color: #fff; }
+.veredicto.des-verde #btn-confirmar:hover { background: color-mix(in srgb, var(--ok) 82%, #000); border-color: color-mix(in srgb, var(--ok) 82%, #000); }
 
 .bloque { border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); }
 .bloque > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 9px; padding: 11px 14px; font-size: 13px; font-weight: 500; user-select: none; }
