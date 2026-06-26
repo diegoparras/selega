@@ -771,10 +771,14 @@ async function init() {
   // ---- Configuración del agente: Motor OCR (lectura por región) ----
   pintarSelectorOcr();
   $("#btn-config").onclick = () => {
-    mostrarControl();                          // la config vive en la vista de control
-    pintarSelectorOcr();                       // refresca por si cambió la disponibilidad
-    $("#cfg-ocr").classList.toggle("hidden");
+    $("#hdr-menu").classList.add("hidden");     // cerrar el kebab
+    pintarSelectorOcr();                        // refresca por si cambió la disponibilidad
+    $("#cfg-ocr").classList.remove("hidden");   // abrir el modal de configuración
   };
+  // Cerrar el modal de configuración: la X, click en el fondo, o Escape.
+  $("#cfg-ocr-x").onclick = () => $("#cfg-ocr").classList.add("hidden");
+  $("#cfg-ocr").addEventListener("click", (e) => { if (e.target.id === "cfg-ocr") $("#cfg-ocr").classList.add("hidden"); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#cfg-ocr").classList.contains("hidden")) $("#cfg-ocr").classList.add("hidden"); });
   $("#cfg-motor-ocr").addEventListener("change", (e) => {
     motorOcrElegido = e.target.value || "";
     try { localStorage.setItem("selega.motorOcr", motorOcrElegido); } catch { /* sin storage */ }

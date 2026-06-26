@@ -423,8 +423,8 @@ button.mini { padding: 3px 9px; font-size: 13px; line-height: 1.2; }
 .fmt-warn { font-size: 12px; color: var(--bad); }
 
 /* Configuración del agente: selector de Motor OCR + su guía bajo la opción */
-#cfg-ocr { flex-direction: column; align-items: stretch; gap: 8px; }
-.cfg-ocr-sel { flex-direction: column; align-items: flex-start; gap: 5px; }
+/* #cfg-ocr es un modal (.modal-back); el layout lo gobierna el modal. Acá solo el contenido. */
+.cfg-ocr-sel { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 4px; }
 .cfg-ocr-sel select { min-width: 280px; max-width: 100%; }
 #cfg-ocr-guia { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .cfg-ocr-disp { display: inline-flex; gap: 4px; align-items: center; }

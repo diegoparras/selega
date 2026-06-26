@@ -8,7 +8,7 @@
   <meta name="selega-auth-mode" content="__SELEGA_AUTH_MODE__" />
   <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
   <script>if (localStorage.getItem("selega.theme") === "dark") document.documentElement.dataset.theme = "dark";</script>
-  <link rel="stylesheet" href="./styles/app.css?v=41" />
+  <link rel="stylesheet" href="./styles/app.css?v=42" />
 </head>
 <body class="booting">
   <div id="login" class="login-overlay hidden">
@@ -145,12 +145,6 @@
       </label>
       <span id="fmt-warn" class="fmt-warn"></span>
     </div>
-    <div id="cfg-ocr" class="cfg-formato hidden">
-      <label class="cfg-ocr-sel">Motor OCR (lectura por región)
-        <select id="cfg-motor-ocr"></select>
-      </label>
-      <p id="cfg-ocr-guia" class="adm-hint"></p>
-    </div>
     <div class="workspace">
     <section id="lienzo" class="panel hidden">
       <div class="lienzo-bar">
@@ -252,6 +246,20 @@
 
   <main id="vista-admin" class="hidden"></main>
 
-  <script type="module" src="./src/app.js?v=50"></script>
+  <!-- Configuración del agente (modal): motor de lectura por región. Lo abre el menú → Configuración. -->
+  <div id="cfg-ocr" class="modal-back hidden">
+    <div class="modal-card">
+      <button class="modal-x" id="cfg-ocr-x" type="button" aria-label="Cerrar">&#10005;</button>
+      <h3 class="modal-tit">Configuración de lectura</h3>
+      <div class="modal-cuerpo">
+        <label class="cfg-ocr-sel">Motor OCR (lectura por región)
+          <select id="cfg-motor-ocr"></select>
+        </label>
+        <p id="cfg-ocr-guia" class="adm-hint"></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/app.js?v=51"></script>
 </body>
 </html>
