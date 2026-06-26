@@ -16,7 +16,6 @@ import { motorPaddle } from "./t2-paddleocr.js";
 import { motorTesseract } from "./t1-tesseract.js";
 import { motorOcrs } from "./t3-ocrs.js";
 import { motorOllama } from "./t4-ollama.js";
-import { motorVLM } from "./t5-vlm-browser.js";
 
 const registro = new Map();
 
@@ -63,8 +62,5 @@ registrar(motorOcrs);
 // T4 Ollama (VLM en el server): artillería para casos raros. disponible()=false hasta que
 // la IA esté prendida (cap_vlm_local/nube, vía ia_disponible de /api/me cacheado en app.js).
 registrar(motorOllama);
-// T5 TrOCR (VLM en el navegador, WebGPU): registrado para que aparezca como opción, pero su
-// disponible() ya devuelve false salvo flags de operador → queda apagado solo (no rompe).
-registrar(motorVLM);
 
 export { registro };

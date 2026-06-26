@@ -24,7 +24,7 @@ const ROLES = ["agente", "supervisor", "auditor", "admin", "superadmin"];
 const MOTORES_OCR_DEFAULT = ["t2-paddleocr", "t1-tesseract", "t3-ocrs"];
 const CAP_DEFAULTS = { cap_ocr: "1", cap_vlm_local: "0", cap_firma: "0", cap_firma_ocsp: "0", ollama_url: "http://host.docker.internal:11434", ollama_model: "qwen2.5vl:3b", ia_routing: "local-first", ollama_keep: "demanda", data_collection_deny: config.dataCollectionDeny, motor_region: "auto", motores_ocr: JSON.stringify(MOTORES_OCR_DEFAULT) };
 // Ids de motores OCR conocidos (whitelist para la validación del PUT del superadmin).
-const MOTORES_OCR_IDS = ["t1-tesseract", "t2-paddleocr", "t3-ocrs", "t4-ollama", "t5-vlm"];
+const MOTORES_OCR_IDS = ["t1-tesseract", "t2-paddleocr", "t3-ocrs", "t4-ollama"];
 // Motor de lectura por región (lo elige el superadmin): auto = texto nativo y, si no hay, OCR;
 // texto = solo la capa de texto del PDF (digital, exacto e instantáneo); ocr = solo Tesseract (escaneados).
 const MOTORES_REGION = ["auto", "texto", "ocr"];
