@@ -1,0 +1,111 @@
+// novedades.js — Novedades por version, leidas del CHANGELOG.md (una sola fuente de verdad).
+// Se muestran en tres lugares: el log de arranque (lo primero que se ve en el deploy de
+// EasyPanel), la UI (aviso "Novedades" al entrar despues de una actualizacion) y el Release de
+// GitHub que crea el CI. Formato esperado (Keep a Changelog):
+//   ## [X.Y.Z] - AAAA-MM-DD
+//   ### Seccion
+//   - item (las lineas siguientes con sangria continuan el item)
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const RE_VERSION = /^## \[(\d+\.\d+\.\d+)\](?:\s*-\s*(\d{4}-\d{2}-\d{2}))?/;
+
+/** @returns {{version:string, fecha:string|null, secciones:{titulo:string, items:string[]}[]}[]} */
+export function parsear(texto) {
+  const versiones = [];
+  let v = null, sec = null;
+  for (const linea of String(texto || "").split(/\r?\n/)) {
+    const m = linea.match(RE_VERSION);
+    if (m) { v = { version: m[1], fecha: m[2] || null, secciones: [] }; versiones.push(v); sec = null; continue; }
+    if (!v) continue;
+    if (/^## /.test(linea)) { v = null; continue; }
+    const t = linea.match(/^### (.+)/);
+    if (t) { sec = { titulo: t[1].trim(), items: [] }; v.secciones.push(sec); continue; }
+    if (!sec) continue;
+    const item = linea.match(/^- (.*)/);
+    if (item) { sec.items.push(item[1].trim()); continue; }
+    if (/^\s+\S/.test(linea) && sec.items.length) sec.items[sec.items.length - 1] += " " + linea.trim();
+  }
+  for (const x of versiones) x.secciones = x.secciones.filter((s) => s.items.length);
+  return versiones;
+}
+
+export function comparar(a, b) {
+  const pa = String(a).split(".").map(Number), pb = String(b).split(".").map(Number);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+  return 0;
+}
+
+/** Versiones posteriores a `vista` y hasta `actual` inclusive (sin `vista`: solo la actual). */
+export function desde(versiones, vista, actual) {
+  if (!vista) return versiones.filter((x) => x.version === actual);
+  return versiones.filter((x) => comparar(x.version, vista) > 0 && comparar(x.version, actual) <= 0);
+}
+
+const plano = (s) => String(s).replace(/\*\*(.+?)\*\*/g, "$1").replace(/`([^`]+)`/g, "$1");
+
+/** Una linea por item, sin markdown, para el log del contenedor. */
+export function lineasLog(v) {
+  return v.secciones.flatMap((s) => s.items.map((i) => `${s.titulo}: ${plano(i)}`));
+}
+
+/** Corta un texto en renglones de hasta `ancho`; el primero lleva `pre`, los demas `sangria`. */
+function cortar(texto, ancho, pre, sangria) {
+  const out = [];
+  let linea = pre;
+  for (const palabra of String(texto).split(/\s+/).filter(Boolean)) {
+    const base = linea === pre || linea === sangria;
+    if (!base && linea.length + 1 + palabra.length > ancho) { out.push(linea); linea = sangria; }
+    linea += (linea === pre || linea === sangria ? "" : " ") + palabra;
+  }
+  out.push(linea);
+  return out;
+}
+
+/**
+ * Cartel que se imprime PRIMERO al levantar el contenedor (lo que se ve en los registros de
+ * EasyPanel): version, fecha y que cambia, cortado al ancho para leerlo sin scroll lateral.
+ */
+export function cartelArranque(version, versiones, ancho = 80) {
+  const v = (versiones || []).find((x) => x.version === version);
+  const raya = "=".repeat(Math.min(ancho, 60));
+  const lineas = [raya, `SELEGA v${version}${v && v.fecha ? `  (${v.fecha})` : ""}`];
+  if (!v || !v.secciones.length) {
+    lineas.push("Sin notas para esta version en el CHANGELOG.");
+  } else {
+    lineas.push("Que cambia en esta version:");
+    for (const l of lineasLog(v)) lineas.push(...cortar(l, ancho, "- ", "    "));
+  }
+  lineas.push(raya);
+  return lineas;
+}
+
+/** Notas en markdown para el Release de GitHub. */
+export function notasMarkdown(v) {
+  return v.secciones.map((s) => `### ${s.titulo}\n${s.items.map((i) => `- ${i}`).join("\n")}`).join("\n\n") + "\n";
+}
+
+let cache = null;
+/** CHANGELOG.md de la instalacion (viene en la imagen). Sin archivo: lista vacia, nunca tira. */
+export function todas() {
+  if (cache) return cache;
+  try {
+    cache = parsear(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "CHANGELOG.md"), "utf8"));
+  } catch {
+    cache = [];
+  }
+  return cache;
+}
+
+let version = null;
+/** Version instalada (package.json, la misma que el server inyecta en el HTML). */
+export function versionInstalada() {
+  if (version !== null) return version;
+  try {
+    version = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf8")).version || "";
+  } catch {
+    version = "";
+  }
+  return version;
+}

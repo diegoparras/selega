@@ -1,4 +1,5 @@
-FROM node:22-slim
+# Imagen base fijada por digest (node:24-slim, LTS) para builds reproducibles.
+FROM node:24-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
 WORKDIR /app
 # OCR para PDFs escaneados: Tesseract (+ español) y poppler (pdftoppm) horneados.
 # hadolint ignore=DL3008  (Debian slim solo sirve el último; pinnear versiones se rompe en cada update del repo)
@@ -9,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Los overrides de package.json fijan las transitivas a versiones parcheadas (sin CVE).
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev --no-audit --no-fund
+# Incluye CHANGELOG.md: el cartel de arranque y las Novedades de la UI lo leen de aca.
 COPY . /app
 EXPOSE 8080
 # Healthcheck (Checkov CKV_DOCKER_2 / CIS-DI-0006): el server responde el index.

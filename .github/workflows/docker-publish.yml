@@ -3,6 +3,10 @@ name: Publicar imagen Docker (GHCR)
 # Construye y publica la imagen en GitHub Container Registry en cada push a main y en cada tag vX.Y.Z.
 # Luego, cualquier panel (Dokploy/Easypanel/Portainer/Coolify) la baja con:
 #   docker pull ghcr.io/diegoparras/selega:latest
+#  - push a main           -> tags :latest + :X.Y.Z (de package.json) + :sha, y Release vX.Y.Z
+#                             con las notas de esa version del CHANGELOG.md
+#  - tag vX.Y.Z (release)  -> tag :vX.Y.Z
+# Cada version dice que cambia: sin su seccion en el CHANGELOG el build no sale.
 
 on:
   push:
@@ -15,29 +19,45 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
       - name: Instalar dependencias
         run: npm ci
-      - name: Tests del núcleo (cruces + motor)
+      - name: Tests del núcleo (cruces + motor + firma + novedades)
         run: npm test
 
   build-push:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write   # crear el tag y el Release de la version
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Version y novedades (CHANGELOG)
+        id: ver
+        run: |
+          V="$(node server/notas-version.js --version)"
+          node server/notas-version.js > "$RUNNER_TEMP/notas.md"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Selega v$V"
+            echo
+            cat "$RUNNER_TEMP/notas.md"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login a GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -45,16 +65,19 @@ jobs:
 
       - name: Metadata (tags / labels)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.ver.outputs.version }},enable={{is_default_branch}}
             type=ref,event=tag
             type=sha,format=short
+          labels: |
+            org.opencontainers.image.version=${{ steps.ver.outputs.version }}
 
       - name: Build & push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -62,3 +85,15 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Release de la version
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          V: ${{ steps.ver.outputs.version }}
+        run: |
+          if gh release view "v$V" >/dev/null 2>&1; then
+            echo "::warning::La v$V ya estaba publicada: este deploy no subio la version (patch) ni sumo novedades."
+          else
+            gh release create "v$V" --target "$GITHUB_SHA" --title "Selega v$V" --notes-file "$RUNNER_TEMP/notas.md"
+          fi

@@ -21,6 +21,7 @@ import { montarExpediente } from "./expediente.js";
 import { exportarInforme } from "./informe.js";
 import { montarSuper } from "./super.js";
 import { initFirma } from "./firma.js";
+import { avisarNovedades, verNovedades } from "./novedades.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 let formato = cargarFormato();                       // miles / decimal / negativos (configurable)
@@ -647,11 +648,17 @@ async function init() {
     const v = document.querySelector('meta[name="selega-version"]')?.content || "";
     const ver = /^\d/.test(v) ? `v${v}` : "—";
     aviso("Acerca de Selega",
-      `Selega <strong>${esc(ver)}</strong><br>Control de estados contables para legalizaciones.<br>` +
+      `Selega <strong>${esc(ver)}</strong> · <button type="button" class="linkbtn" id="acerca-novedades">Qué cambió</button><br>` +
+      `Control de estados contables para legalizaciones.<br>` +
       `Parte de la familia Escriba.<br><br>Licencia Apache-2.0<br>` +
       `<a href="https://github.com/diegoparras/selega" target="_blank" rel="noopener noreferrer">GitHub</a> · ` +
       `<a href="https://getescriba.com/es/selega/" target="_blank" rel="noopener noreferrer">getescriba.com</a>`);
+    // "Qué cambió": cierra el Acerca de y abre el historial de novedades.
+    const qc = document.getElementById("acerca-novedades");
+    if (qc) qc.onclick = () => { qc.closest(".modal-card")?.querySelector(".modal-ok")?.click(); verNovedades(); };
   };
+  // Novedades (menú): historial de cambios por versión, del CHANGELOG.
+  $("#btn-novedades").onclick = () => verNovedades();
 
   // Gate de sesión (Postgres + cookie firmada). Si no hay sesión, mostrar login.
   // Mientras tanto, .booting mantiene oculta la app (splash con logo) para que NO parpadee
@@ -677,6 +684,8 @@ async function init() {
   $("#user-info").style.display = "";
   $("#btn-logout").style.display = "";
   $("#btn-logout").onclick = async () => { await logout(); location.reload(); };
+  // Tras una actualización: avisa una vez (por navegador) qué cambió desde la última versión vista.
+  setTimeout(avisarNovedades, 400);
 
   // ---- Vista efectiva (A: herencia estricta · B: "ver como [rol]") ----
   // Reaplica la UI que depende del rol según vistaRol. Los permisos REALES siguen atados a

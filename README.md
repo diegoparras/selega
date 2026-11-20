@@ -177,6 +177,14 @@ lockout de login y queries parametrizadas. Auditado con semgrep / OWASP ZAP / Tr
 Publicada en GHCR en cada push: `ghcr.io/diegoparras/selega:latest`. La construye un GitHub
 Action ([.github/workflows/docker-publish.yml](.github/workflows/docker-publish.yml)).
 
+**Versión y novedades de cada deploy.** Cada deploy sube el *patch* de la versión y suma su sección
+`## [X.Y.Z]` en el [CHANGELOG.md](CHANGELOG.md) (sin ella el build no sale). Esas notas se ven en
+tres lugares: lo **primero que escribe el contenedor al levantar** (en EasyPanel: servicio →
+Resumen → Registros) es un cartel con la versión, la fecha y qué cambia; en la **interfaz**, al
+entrar después de una actualización aparece una vez el aviso **Novedades** (el historial queda en el
+menú ⋮ y en **Acerca de Selega → Qué cambió**); y en **GitHub**, la imagen se etiqueta también
+`:X.Y.Z` y se crea el Release `vX.Y.Z` con esas mismas notas.
+
 ## Stack
 
 Vanilla JS (ES modules, sin framework) · Node.js (server HTTP propio) · PostgreSQL (`pg`) ·

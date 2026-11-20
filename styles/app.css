@@ -136,6 +136,18 @@ main { padding: 20px 22px 60px; max-width: 1280px; margin: 0 auto; }
 .modal-acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .modal-acciones button { border-radius: 999px; padding: 9px 18px; }
 .modal-ok.peligro { background: var(--err); border-color: var(--err); }
+/* Novedades (que cambio en cada version, del CHANGELOG): modal mas ancho y scrolleable. */
+.nov-card { width: min(580px, 94vw); max-height: 85vh; overflow: auto; }
+.nov-ver { margin: 16px 0 4px; display: flex; align-items: baseline; gap: 10px; color: var(--text); }
+.nov-ver b { font-family: var(--mono); font-size: 14px; }
+.nov-ver span { color: var(--muted); font-size: 12.5px; font-family: var(--mono); }
+.nov-sec { margin: 8px 0 2px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.nov-list { margin: 2px 0 6px; padding-left: 18px; font-size: 13.5px; line-height: 1.5; }
+.nov-list li { margin: 3px 0; }
+.nov-list strong { color: var(--text); }
+.nov-list code { font-family: var(--mono); font-size: 12px; }
+button.linkbtn, button.linkbtn:hover { background: none; border: none; padding: 0; border-radius: 0; color: var(--accent);
+  cursor: pointer; font: inherit; text-decoration: underline; text-underline-offset: 2px; box-shadow: none; }
 @keyframes dl-pop { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
 .users td, .users th { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; }
 .warn-box { border: 1px solid var(--line); border-left: 3px solid var(--warn); border-radius: 0 8px 8px 0;

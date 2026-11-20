@@ -8,10 +8,14 @@ import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
 import { initDb, seedAdmin } from "./db.js";
 import { handle } from "./api.js";
+import { cartelArranque, todas } from "./novedades.js";
 
 const root = normalize(join(dirname(fileURLToPath(import.meta.url)), "..")); // raíz de la app
 // Versión: única fuente = package.json. Se inyecta en el HTML (el "Acerca de" la lee del <meta>).
 const VERSION = (() => { try { return JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version || ""; } catch { return ""; } })();
+// Lo primero que se ve en los registros al levantar (deploy en EasyPanel): version y que cambia,
+// sacado del CHANGELOG.md. Nunca rompe el arranque: sin CHANGELOG avisa que no hay notas.
+try { for (const l of cartelArranque(VERSION, todas())) console.log(`  ${l}`); } catch { /* el cartel nunca frena el server */ }
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript",
   ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml",
   ".ico": "image/x-icon", ".png": "image/png", ".wasm": "application/wasm",
@@ -19,7 +23,7 @@ const MIME = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/jav
   ".traineddata": "application/octet-stream", ".onnx": "application/octet-stream",
   ".ort": "application/octet-stream", ".txt": "text/plain; charset=utf-8" };
 const BLOQUEADO = (p) => p.startsWith("/server") || p.startsWith("/node_modules") ||
-  p.endsWith(".db") || p.includes(".db-") || p === "/package.json" || p.startsWith("/test");
+  p.endsWith(".db") || p.includes(".db-") || p === "/package.json" || p === "/CHANGELOG.md" || p.startsWith("/test");
 
 const server = http.createServer(async (req, res) => {
   const path = decodeURIComponent(req.url.split("?")[0]);

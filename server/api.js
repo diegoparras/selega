@@ -8,6 +8,7 @@ import { extraerDePDF } from "./extraer.js";
 import { verificarFirma, trustRootsInfo } from "./firma/index.js";
 import { createLockatus, pkce, randomId } from "./lockatus.js";
 import { extraerConSidecar, sidecarDisponible } from "./extractor-client.js";
+import * as nov from "./novedades.js";
 
 // Cliente OIDC hacia Lockatus (solo modo federado; construcción perezosa, una vez).
 let _lk = null;
@@ -206,6 +207,19 @@ export async function handle(req, res, path) {
   // ---- de acá en adelante requiere sesión ----
   const user = await currentUser(req);
   if (!user) return json(res, 401, { error: "no autenticado" });
+
+  // ---- novedades: que cambio desde la ultima version vista (sale del CHANGELOG.md) ----
+  // GET /api/novedades?desde=X.Y.Z  -> versiones posteriores a la vista, hasta la instalada
+  // GET /api/novedades?todas=1      -> historial completo hasta la instalada
+  if (path === "/api/novedades" && m === "GET") {
+    const q = new URL(req.url, "http://x").searchParams;
+    const actual = nov.versionInstalada();
+    const vista = /^\d+\.\d+\.\d+$/.test(q.get("desde") || "") ? q.get("desde") : null;
+    const versiones = q.get("todas") === "1"
+      ? nov.todas().filter((x) => nov.comparar(x.version, actual) <= 0)
+      : nov.desde(nov.todas(), vista, actual);
+    return json(res, 200, { version: actual, versiones });
+  }
 
   // ---- extracción de PDF (spawnea OCR): autenticada + límite de tamaño (anti-DoS). ----
   if (path === "/api/extraer" && m === "POST") {
