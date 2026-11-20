@@ -10,7 +10,7 @@ export const config = {
   // Si está en env, tiene prioridad y ni se guarda en la base.
   openrouterKeyEnv: process.env.OPENROUTER_KEY || "",
   adminEmail: process.env.SELEGA_ADMIN_EMAIL || "admin@selega.local",
-  adminPass: process.env.SELEGA_ADMIN_PASS || "", // si vacío, se genera y se imprime una vez
+  adminPass: process.env.SELEGA_ADMIN_PASS || "", // si vacío, se genera y queda en un archivo 0600 (clave-inicial.js), nunca en el log
   cookieName: "selega_session",
   oidcCookieName: "selega_oidc", // transacción OIDC (verifier/state/nonce) en modo federado
   sessionTtlMs: 1000 * 60 * 60 * 12, // 12 h

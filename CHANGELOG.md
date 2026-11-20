@@ -5,6 +5,18 @@ Todos los cambios de Selega, de la versión más nueva a la más vieja. Formato 
 [SemVer](https://semver.org/lang/es/). Cada deploy sube el patch y suma acá su sección: sin ella
 el build no sale.
 
+## [1.0.10] - 2026-11-20
+
+### Seguridad
+- **La contrasena generada del admin ya no se escribe en los registros del contenedor.** Sin
+  `SELEGA_ADMIN_PASS`, queda en `/tmp/selega-admin-clave-inicial` (permisos 0600, solo la app la lee;
+  `SELEGA_SECRETOS_DIR` cambia la carpeta) y el log dice como leerla desde la consola del servicio.
+  Si el archivo se pierde, fijar `SELEGA_ADMIN_PASS` y reiniciar resetea la contrasena del admin.
+- La contrasena generada pasa de 8 a 16 caracteres.
+
+### Cambiado
+- Los avisos del arranque dicen "AVISO:" en lugar de un simbolo (sin emojis en la consola).
+
 ## [1.0.9] - 2026-11-20
 
 ### Nuevo

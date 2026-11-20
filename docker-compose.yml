@@ -27,7 +27,7 @@ services:
       - "${SELEGA_PORT:-8088}:8080"          # host → contenedor 8080
     environment:
       SELEGA_ADMIN_EMAIL: ${SELEGA_ADMIN_EMAIL:-admin@selega.local}
-      SELEGA_ADMIN_PASS: ${SELEGA_ADMIN_PASS:-}        # vacío → se genera y se imprime UNA vez en los logs
+      SELEGA_ADMIN_PASS: ${SELEGA_ADMIN_PASS:-}        # vacío → se genera y queda en /tmp/selega-admin-clave-inicial (nunca en los logs)
       SELEGA_SECURE_COOKIE: ${SELEGA_SECURE_COOKIE:-0} # poné 1 detrás de TLS (reverse proxy / HTTPS)
       OPENROUTER_KEY: ${OPENROUTER_KEY:-}              # opcional: la IA en la nube; mejor cargarla desde Admin
       DATABASE_URL: "postgresql://${POSTGRES_USER:-selega}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-selega}"

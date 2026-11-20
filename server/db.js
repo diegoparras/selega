@@ -166,9 +166,9 @@ export async function seedAdmin() {
     if (config.adminPass) await setUserPass(existing.id, config.adminPass);
     return null;
   }
-  const pass = config.adminPass || randomBytes(6).toString("base64url");
+  const pass = config.adminPass || randomBytes(12).toString("base64url");
   // El que instala COMISIONA el sistema → arranca como superadmin (motores + jurisdicciones).
   await createUser({ email: config.adminEmail, pass, role: "superadmin" });
   await auditar("sistema", null, "seed_admin", config.adminEmail);
-  return config.adminPass ? null : pass; // pass generada → se imprime una vez
+  return config.adminPass ? null : pass; // pass generada → index.js la guarda en un archivo 0600 (nunca al log)
 }

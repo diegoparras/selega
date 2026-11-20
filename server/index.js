@@ -9,6 +9,7 @@ import { config } from "./config.js";
 import { initDb, seedAdmin } from "./db.js";
 import { handle } from "./api.js";
 import { cartelArranque, todas } from "./novedades.js";
+import { guardarClaveInicial, avisoClaveInicial } from "./clave-inicial.js";
 
 const root = normalize(join(dirname(fileURLToPath(import.meta.url)), "..")); // raíz de la app
 // Versión: única fuente = package.json. Se inyecta en el HTML (el "Acerca de" la lee del <meta>).
@@ -63,7 +64,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-let passGenerada = null, dbOk = false;
+let avisoClave = null, dbOk = false;
 
 // Salto de puerto si está ocupado (en vez de morir con EADDRINUSE).
 let port = config.port;
@@ -76,9 +77,10 @@ server.on("error", (e) => {
 server.on("listening", () => {
   const p = server.address().port;
   console.log(`\n  Selega → http://localhost:${p}`);
-  if (!dbOk) { console.log("  ⚠ Postgres no disponible — estático + /api/extraer OK; login/persistencia OFF\n"); return; }
-  console.log(`  Login:  ${config.adminEmail}`);
-  if (passGenerada) console.log(`  Pass:   ${passGenerada}   (generada, se muestra una vez)`);
+  if (!dbOk) { console.log("  AVISO: Postgres no disponible — estático + /api/extraer OK; login/persistencia OFF\n"); return; }
+  console.log(avisoClave ? avisoClave[0] : `  Login:  ${config.adminEmail}`);
+  // La contrasena generada NUNCA va al log: solo donde leerla (ver clave-inicial.js).
+  if (avisoClave) for (const l of avisoClave.slice(1)) console.log(l);
   else console.log(`  Pass:   (la de SELEGA_ADMIN_PASS o la ya seteada)`);
   console.log("");
 });
@@ -86,11 +88,19 @@ server.on("listening", () => {
 // Init de la base ANTES de servir. No-fatal: si Postgres no está (ej. preview local
 // sin DB), igual levanta para servir la app estática + la extracción de PDF.
 (async () => {
-  try { await initDb(); passGenerada = await seedAdmin(); dbOk = true; }
+  try {
+    await initDb();
+    const generada = await seedAdmin();
+    if (generada) {
+      try { avisoClave = avisoClaveInicial({ email: config.adminEmail, ruta: guardarClaveInicial(generada) }); }
+      catch (e) { avisoClave = avisoClaveInicial({ email: config.adminEmail, error: e }); }
+    }
+    dbOk = true;
+  }
   catch (e) {
     // Enmascarar la password de la URL: estos logs se miran/comparten para diagnosticar (README).
     const urlSegura = String(config.databaseUrl || "").replace(/:[^:@/]+@/, ":****@");
-    console.warn("  ⚠ No se pudo inicializar Postgres:", e.message || e.code || String(e), "| url:", urlSegura);
+    console.warn("  AVISO: No se pudo inicializar Postgres:", e.message || e.code || String(e), "| url:", urlSegura);
     if (e.errors) console.warn("     causas:", e.errors.map((x) => x.message || x.code).join("; "));
   }
   server.listen(port);

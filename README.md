@@ -70,7 +70,7 @@ GitHub** (el panel buildea la imagen solo). Si tu panel solo deja *pegar un comp
 1. **+ Service → App** (o **Compose** si tu versión lo trae).
 2. *Source*: GitHub → `diegoparras/selega`.
 3. **Environment**: cargá las variables (`POSTGRES_PASSWORD`, etc.).
-4. **Deploy**. La contraseña de admin sale en los logs.
+4. **Deploy**. Si no fijaste `SELEGA_ADMIN_PASS`, la contraseña de admin se genera y queda en el contenedor (nunca en los logs): los logs dicen cómo leerla desde la consola (`cat /tmp/selega-admin-clave-inicial`).
 5. Easypanel pone TLS solo → activá `SELEGA_SECURE_COOKIE=1`.
 
 ### Coolify
@@ -84,7 +84,7 @@ GitHub** (el panel buildea la imagen solo). Si tu panel solo deja *pegar un comp
 2. *Build method*: **Repository** → URL `https://github.com/diegoparras/selega`, compose path
    `docker-compose.yml`. (O **Web editor** y pegá el [compose image-only](#pegar-compose-image-only).)
 3. En **Environment variables** agregá `POSTGRES_PASSWORD` (y lo que quieras).
-4. **Deploy the stack**. La contraseña de admin está en los logs del contenedor `selega`.
+4. **Deploy the stack**. Si no fijaste `SELEGA_ADMIN_PASS`, la contraseña generada queda en el contenedor `selega` (nunca en los logs): `docker exec selega cat /tmp/selega-admin-clave-inicial`.
 
 <a name="pegar-compose-image-only"></a>
 ### Pegar un compose (image-only, sin buildear)
@@ -130,7 +130,7 @@ volumes:
 |---|---|---|
 | `POSTGRES_PASSWORD` | — (**obligatoria**) | contraseña de la base. Poné algo fuerte. |
 | `SELEGA_ADMIN_EMAIL` | `admin@selega.local` | usuario del primer superadmin. |
-| `SELEGA_ADMIN_PASS` | *(vacío)* | dejalo vacío → se **genera** y se imprime una vez en los logs. |
+| `SELEGA_ADMIN_PASS` | *(vacío)* | dejalo vacío → se **genera** y queda en `/tmp/selega-admin-clave-inicial` (0600, nunca en los logs; `SELEGA_SECRETOS_DIR` cambia la carpeta). Fijarla y reiniciar resetea la del admin. |
 | `SELEGA_SECURE_COOKIE` | `0` | poné `1` detrás de HTTPS/TLS (cookie solo por HTTPS). |
 | `SELEGA_PORT` | `8088` | puerto del host. |
 | `OPENROUTER_KEY` | *(vacío)* | opcional, IA en la nube. Mejor cargarla desde Admin. |
